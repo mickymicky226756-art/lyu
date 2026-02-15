@@ -1,0 +1,2776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lyu Optics | Vision</title>
+
+    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/272/272415.png">    
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    
+    <style>
+        /* --- Modern Optical Theme (Glassmorphism) --- */
+        :root {
+            --primary-color: #008080; /* Teal/Emerald */
+            --primary-dark: #004d4d;
+            --accent-color: #E0F7FA;
+            --text-dark: #1e293b;
+            --text-light: #64748b;
+            --glass-bg: rgba(255, 255, 255, 0.95);
+            --glass-border: 1px solid rgba(255, 255, 255, 0.5);
+            --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+            --radius: 20px;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
+        
+        /* --- UPDATED BODY BACKGROUND --- */
+        body {
+            /* Tech/Optical Background Image */
+            background: url('https://images.unsplash.com/photo-1572635196237-14b3f281503f?auto=format&fit=crop&w=800&q=80') no-repeat center center fixed;
+            background-size: cover;
+            color: var(--text-dark);
+            min-height: 100vh;
+            padding-bottom: 90px;
+        }
+
+        /* --- Animations --- */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-up { animation: fadeIn 0.4s ease-out forwards; }
+
+        /* --- Header --- */
+        header {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: var(--glass-border);
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+        }
+
+        .logo { 
+            font-size: 1.4rem; 
+            font-weight: 700; 
+            color: var(--primary-color); 
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .user-pill {
+            background: var(--primary-color);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* --- Views --- */
+        .view-section { display: none; padding-bottom: 20px; }
+        .view-section.active-view { display: block; }
+
+        /* --- Home Components --- */
+        .hero {
+            position: relative; width: 95%; margin: 20px auto; height: 200px;
+            border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow);
+        }
+        .hero img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.7); }
+        .hero-text {
+            position: absolute; bottom: 20px; left: 20px; color: white;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .dashboard {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 15px;
+            padding: 0 20px; margin-bottom: 20px; margin-top: -10px;
+        }
+        .stat-card {
+            background: rgba(255, 255, 255, 0.9); padding: 15px; border-radius: 15px;
+            box-shadow: var(--shadow); text-align: center; border: var(--glass-border);
+            backdrop-filter: blur(5px);
+        }
+        .stat-card h3 { font-size: 0.75rem; color: var(--text-light); text-transform: uppercase; }
+        .stat-card .value { font-size: 1.3rem; font-weight: 700; color: var(--primary-dark); margin-top: 5px; }
+
+        .action-buttons {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 0 20px; margin-bottom: 15px;
+        }
+        .btn-main {
+            padding: 12px; border: none; border-radius: 12px; font-weight: 600; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.95rem;
+        }
+        .btn-deposit { background: var(--primary-color); color: white; box-shadow: 0 4px 15px rgba(0, 128, 128, 0.3); }
+        .btn-withdraw { background: white; color: var(--text-dark); border: 1px solid #ddd; }
+        
+        .secondary-buttons {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 0 20px; margin-bottom: 25px;
+        }
+        .btn-secondary {
+            padding: 10px; border: none; border-radius: 12px; font-weight: 600; cursor: pointer;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; font-size: 0.85rem;
+            background: white; color: var(--text-dark); box-shadow: var(--shadow); border: 1px solid #eee;
+        }
+        .btn-secondary i { font-size: 1.2rem; color: var(--primary-color); }
+
+        /* --- NEW SCROLLING ABOUT SECTION --- */
+        .about-section { padding: 0 20px 20px; margin-top: 10px; }
+        .about-header {
+            font-size: 1.1rem; font-weight: 700; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 15px; display: flex; align-items: center; gap: 8px;
+        }
+        .scroll-container {
+            display: flex; gap: 15px; overflow-x: auto; padding-bottom: 15px;
+            scroll-behavior: smooth; -webkit-overflow-scrolling: touch;
+        }
+        .scroll-container::-webkit-scrollbar { height: 6px; }
+        .scroll-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        .about-card {
+            min-width: 260px; background: white; border-radius: 16px; overflow: hidden;
+            box-shadow: var(--shadow); border: 1px solid rgba(255,255,255,0.8);
+            transition: transform 0.2s;
+        }
+        .about-card:active { transform: scale(0.98); }
+        .about-img { width: 100%; height: 130px; object-fit: cover; }
+        .about-content { padding: 15px; }
+        .about-content h4 { color: var(--primary-dark); font-size: 1rem; margin-bottom: 5px; font-weight: 700; }
+        .about-content p { font-size: 0.85rem; color: #64748b; line-height: 1.4; }
+
+        /* --- Page Banners --- */
+        .page-banner {
+            height: 160px; width: 100%; background-size: cover; background-position: center;
+            position: relative; margin-bottom: 20px; border-bottom-left-radius: 25px; border-bottom-right-radius: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .page-banner::after {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.6));
+            border-bottom-left-radius: 25px; border-bottom-right-radius: 25px;
+        }
+        
+        .withdraw-bg { background-image: url('https://images.unsplash.com/photo-1580519542036-c47de6196ba5?auto=format&fit=crop&w=800&q=80'); }
+        .deposit-bg { background-image: url('https://images.unsplash.com/photo-1611974765270-ca1258634369?auto=format&fit=crop&w=800&q=80'); }
+        .shop-bg { background-image: url('https://images.unsplash.com/photo-1472851294608-062f824d29cc?auto=format&fit=crop&w=800&q=80'); }
+        .invite-bg { background-image: url('https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=800&q=80'); }
+        .orders-bg { background-image: url('https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=800&q=80'); }
+        .gift-bg { background-image: url('https://images.unsplash.com/photo-1513885535751-8b9238bd345a?auto=format&fit=crop&w=800&q=80'); }
+        .income-bg { background-image: url('https://images.unsplash.com/photo-1633158829585-23ba8f7c8caf?auto=format&fit=crop&w=800&q=80'); }
+        .menu-bg { background-image: url('https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=800&q=80'); }
+
+        .page-content { padding: 0 20px; margin-top: -50px; position: relative; z-index: 10; }
+        .page-card {
+            background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 20px; box-shadow: var(--shadow);
+            text-align: center; margin-bottom: 20px; backdrop-filter: blur(10px);
+        }
+
+        .back-btn { 
+            background: white; border: none; padding: 10px 15px; border-radius: 10px; 
+            box-shadow: var(--shadow); cursor: pointer; position:absolute; top: 20px; left: 20px; z-index: 20;
+            color: var(--text-dark); font-weight: bold; display: inline-flex; align-items: center; gap: 5px;
+        }
+        
+        .shop-header-btn {
+            position: absolute; bottom: 20px; right: 20px; z-index: 20;
+            background: white; color: var(--primary-color); padding: 8px 15px;
+            border-radius: 20px; font-weight: bold; border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            cursor: pointer; display: flex; align-items: center; gap: 5px;
+        }
+
+        .bank-info-card {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            color: white; padding: 20px; border-radius: 20px; margin-bottom: 25px;
+            box-shadow: 0 10px 20px rgba(0,128,128,0.3);
+            text-align: left;
+        }
+        .bank-info-row { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
+        .bank-label { font-size: 0.75rem; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px; }
+        .bank-val { font-size: 1.1rem; font-weight: 700; letter-spacing: 0.5px; }
+        .copy-icon { background: rgba(255,255,255,0.2); padding: 8px; border-radius: 8px; cursor: pointer; }
+
+        /* --- SHOP STYLES --- */
+        .section-title { padding: 0 20px; margin-bottom: 15px; font-size: 1.1rem; display: flex; align-items: center; gap: 10px; font-weight: 700; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        .package-list { padding: 0 0 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .package-card {
+            background: rgba(255, 255, 255, 0.95); border-radius: 18px; overflow: hidden; box-shadow: var(--shadow); 
+            display: flex; flex-direction: column; text-align: center; padding: 15px; position: relative;
+            border: 1px solid rgba(255,255,255,0.8); transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .package-card:active { transform: scale(0.97); }
+        .package-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .pkg-badge {
+            position: absolute; top: 10px; left: 10px; background: linear-gradient(45deg, #FFD700, #FFA500);
+            color: white; font-size: 0.65rem; font-weight: bold; padding: 4px 10px; border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); z-index: 2;
+        }
+        .pkg-img { width: 100%; height: 100px; border-radius: 12px; object-fit: contain; background: #f8fafc; margin-bottom: 10px; padding: 5px; }
+        .pkg-info { flex: 1; display: flex; flex-direction: column; justify-content: space-between; width: 100%; }
+        .pkg-info h4 { font-size: 0.95rem; color: var(--text-dark); margin-bottom: 5px; font-weight: 700; line-height: 1.2; }
+        .pkg-roi-box { background: #ecfdf5; border-radius: 8px; padding: 5px; margin: 5px 0; color: #059669; font-size: 0.8rem; font-weight: 600; }
+        .pkg-price { font-size: 1.1rem; font-weight: 800; color: var(--primary-dark); margin: 5px 0 10px;}
+        .btn-invest {
+            width: 100%; background: linear-gradient(90deg, var(--primary-color), var(--primary-dark)); 
+            color: white; border: none; padding: 10px; border-radius: 10px; cursor: pointer; font-size: 0.85rem; font-weight: 600;
+            box-shadow: 0 4px 10px rgba(0,128,128,0.2);
+        }
+        .btn-invest:disabled { background: #cbd5e1; color: #64748b; box-shadow: none; cursor: not-allowed; }
+
+        /* --- Orders & Tasks --- */
+        .order-card { background: white; padding: 15px; margin: 0 20px 15px; border-radius: 15px; box-shadow: var(--shadow); border: 1px solid #eee; }
+        .order-header { display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid #f0f0f0; padding-bottom: 8px;}
+        .order-title { font-weight: bold; color: var(--primary-dark); }
+        .order-status { font-size: 0.75rem; background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 5px; }
+        .order-body { display: flex; justify-content: space-between; align-items: center; }
+        
+        .btn-claim { background: var(--warning); color: white; border: none; padding: 8px 15px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: bold; }
+        .btn-claim:active { transform: scale(0.95); }
+        .btn-claim:disabled { background: #cbd5e1; cursor: not-allowed; color: #64748b; transform: none; }
+
+        .task-card { background: white; margin: 0 20px 15px; padding: 15px; border-radius: 15px; box-shadow: var(--shadow); display: flex; align-items: center; justify-content: space-between; }
+        .task-icon { width: 45px; height: 45px; background: var(--accent-color); color: var(--primary-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .task-content { flex: 1; margin-left: 15px; }
+        .task-content h4 { font-size: 0.95rem; margin-bottom: 3px; }
+        .task-content p { font-size: 0.8rem; color: #777; }
+        .btn-task { background: var(--primary-color); color: white; border: none; padding: 8px 15px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; }
+        .btn-task:disabled { background: #ccc; cursor: not-allowed; }
+        .btn-task.claimed { background: #10b981; pointer-events: none; }
+
+        /* --- INVITE BOX STYLES --- */
+        .invite-box { background: #f8fafc; border: 2px dashed var(--primary-color); padding: 20px; border-radius: 15px; text-align: center; margin: 20px 0; position: relative; }
+        .invite-code-text { font-size: 1.8rem; letter-spacing: 2px; font-weight: 800; color: var(--primary-dark); margin: 10px 0;}
+
+        /* --- Profile View --- */
+        .profile-header { background: rgba(255,255,255,0.9); margin: 20px; padding: 25px; border-radius: 20px; text-align: center; box-shadow: var(--shadow); margin-bottom: 15px; position: relative; backdrop-filter: blur(10px); }
+        .profile-avatar { width: 80px; height: 80px; background: var(--accent-color); color: var(--primary-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto 15px; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 20px 15px; }
+        .stat-box { background: rgba(255,255,255,0.9); padding: 15px; border-radius: 15px; box-shadow: var(--shadow); text-align: center; display: flex; flex-direction: column; justify-content: center; backdrop-filter: blur(5px); }
+        .stat-box h3 { font-size: 1.1rem; color: var(--primary-color); font-weight: 700; margin: 5px 0 0; }
+        .stat-box small { font-size: 0.75rem; color: var(--text-light); text-transform: uppercase; font-weight: 600; }
+        .full-width-stat { grid-column: span 2; display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; }
+        .level-row { display: flex; justify-content: space-between; background: #f8fafc; padding: 12px; border-radius: 10px; margin-top: 5px; font-size: 0.85rem; border: 1px solid #f1f5f9; }
+
+        /* --- MENU & LIST STYLES (Used for the new Page) --- */
+        .menu-btn-container { display: flex; justify-content: flex-end; padding: 10px 20px 0; }
+        .menu-list-container { background: white; border-radius: 20px; box-shadow: var(--shadow); overflow: hidden; }
+        .menu-item { padding: 18px 25px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s; }
+        .menu-item:last-child { border-bottom: none; }
+        .menu-item:hover { background: #f9f9f9; }
+        .menu-item i { color: var(--primary-color); width: 25px; }
+
+        /* --- ADMIN PANEL CSS --- */
+        .admin-section-box { background: white; margin: 15px 20px; padding: 20px; border-radius: 15px; box-shadow: var(--shadow); }
+        .admin-req-card { background: white; padding: 15px; margin: 10px 20px; border-radius: 15px; box-shadow: var(--shadow); border-left: 5px solid var(--warning); }
+        .req-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-weight: bold; }
+        .req-detail { font-size: 0.9rem; color: #666; margin-bottom: 5px; }
+        .req-actions { display: flex; gap: 10px; margin-top: 10px; }
+        .btn-approve { background: var(--success); color: white; border: none; padding: 8px 15px; border-radius: 8px; flex: 1; cursor: pointer; }
+        .btn-reject { background: var(--danger); color: white; border: none; padding: 8px 15px; border-radius: 8px; flex: 1; cursor: pointer; }
+        .badge { padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; color: white; }
+        .bg-dep { background: var(--primary-color); }
+        .bg-with { background: #6366f1; }
+        
+        /* ADMIN PLAN EDIT LIST */
+        .admin-plan-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .admin-plan-info {
+            font-size: 0.85rem;
+        }
+        .admin-plan-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        /* --- Bottom Nav --- */
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: white; padding: 12px 20px; display: flex; justify-content: space-around; box-shadow: 0 -5px 20px rgba(0,0,0,0.05); border-top-left-radius: 20px; border-top-right-radius: 20px; z-index: 100; }
+        .nav-item { text-align: center; color: #94a3b8; font-size: 0.75rem; cursor: pointer; transition: 0.3s; }
+        .nav-item i { font-size: 1.3rem; display: block; margin-bottom: 4px; }
+        .nav-item.active { color: var(--primary-color); transform: translateY(-3px); }
+
+        /* --- Auth & Modals (UPDATED FOR FULL BG) --- */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); z-index: 2000; }
+        .modal-content { background: #fff; width: 90%; max-width: 400px; margin: 80px auto; padding: 30px; border-radius: 25px; text-align: center; position: relative; }
+        .close { position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: #aaa; }
+        
+        /* SPECIFIC AUTH MODAL STYLING (To show background) */
+        #authModal {
+            background: transparent !important; /* Remove dark overlay */
+            backdrop-filter: none;
+        }
+        #authModal .modal-content {
+            background: rgba(255, 255, 255, 0.15); /* Glass Effect */
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255,255,255,0.3);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            margin-top: 150px;
+        }
+        #authModal h2 { color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+        #authModal p, #authModal a { color: #f0f0f0 !important; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
+        
+        input { width: 100%; padding: 14px; margin: 8px 0; border: 1px solid #eee; background: #f8fafc; border-radius: 12px; outline: none; transition: 0.3s; }
+        input:focus { border-color: var(--primary-color); background: white; }
+        
+        /* NEW: PHONE INPUT GROUP STYLING */
+        .phone-input-group {
+            display: flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            padding: 0 10px;
+            margin: 8px 0;
+            width: 100%;
+        }
+        .phone-prefix {
+            font-weight: bold;
+            color: #333;
+            padding-right: 8px;
+            border-right: 1px solid #ccc;
+            margin-right: 10px;
+            font-family: monospace;
+            font-size: 1.1rem;
+        }
+        .phone-input-group input {
+            border: none;
+            background: transparent !important;
+            margin: 0;
+            padding: 14px 0;
+            flex: 1;
+        }
+
+        /* NEW: ICON INPUT GROUP STYLING FOR REGISTRATION */
+        .input-with-icon {
+            display: flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            padding: 0 15px;
+            margin: 8px 0;
+            width: 100%;
+        }
+        .input-with-icon i {
+            color: var(--primary-color);
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+        .input-with-icon input {
+            border: none;
+            background: transparent !important;
+            padding: 14px 0;
+            margin: 0;
+            width: 100%;
+        }
+        .input-with-icon input:focus {
+            outline: none;
+        }
+
+        /* Auth Input Transparency */
+        #authModal input:not(.phone-input-group input):not(.input-with-icon input) {
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+        }
+
+        .btn-full { width: 100%; padding: 14px; background: var(--primary-color); color: white; border: none; border-radius: 12px; font-size: 1rem; cursor: pointer; margin-top: 10px; font-weight: 600; }
+        
+        .lang-option { padding: 15px; border: 1px solid #eee; margin-bottom: 10px; border-radius: 10px; cursor: pointer; font-weight: bold; }
+        .lang-option:hover { background: #f0fdf4; border-color: var(--primary-color); }
+
+        #toast { visibility: hidden; min-width: 200px; background-color: #333; color: #fff; text-align: center; border-radius: 50px; padding: 12px; position: fixed; z-index: 3000; left: 50%; bottom: 100px; transform: translateX(-50%); font-size: 0.9rem; }
+        #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+        
+        /* History & Income */
+        .history-card { background: #f8fafc; padding: 12px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; text-align: left; border: 1px solid #f1f5f9; }
+        .history-tabs-container { display: flex; gap: 10px; padding: 0 20px 20px; }
+        .h-tab { flex: 1; padding: 12px; border: none; border-radius: 12px; background: white; color: var(--text-light); font-weight: 600; cursor: pointer; box-shadow: var(--shadow); transition: 0.3s; }
+        .h-tab.active { background: var(--primary-color); color: white; transform: translateY(-2px); }
+        .history-item-full { background: white; border-radius: 16px; padding: 16px; margin: 0 20px 15px; box-shadow: var(--shadow); display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(255,255,255,0.8); }
+        .h-icon { width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-right: 15px; }
+        .h-icon.dep { background: #d1fae5; color: #10b981; }
+        .h-icon.with { background: #fee2e2; color: #ef4444; }
+
+        .badge-success { background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 5px; font-size:0.75rem; font-weight:bold; }
+        .badge-danger { background: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 5px; font-size:0.75rem; font-weight:bold; }
+        .badge-pending { background: #fef3c7; color: #b45309; padding: 2px 8px; border-radius: 5px; font-size:0.75rem; font-weight:bold; }
+
+        /* --- GIFT PAGE STYLES --- */
+        .gift-header-card {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            border-radius: 20px; padding: 30px 20px; color: white;
+            text-align: center; margin-bottom: 20px; box-shadow: var(--shadow);
+            margin-top: -30px; position: relative;
+        }
+        .gift-icon-lg {
+            font-size: 3rem; margin-bottom: 10px;
+            animation: bounce 2s infinite;
+        }
+        @keyframes bounce { 0%, 20%, 50%, 80%, 100% {transform: translateY(0);} 40% {transform: translateY(-10px);} 60% {transform: translateY(-5px);} }
+        
+        .code-input-box {
+            background: white; border-radius: 15px; padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05); text-align: center;
+        }
+        .code-display {
+            font-family: monospace; font-size: 1.5rem; letter-spacing: 2px;
+            background: #f1f5f9; padding: 15px; border-radius: 10px;
+            margin: 15px 0; color: var(--primary-dark); font-weight: bold;
+            border: 2px dashed #cbd5e1;
+        }
+
+        /* --- PROCESSING MODAL ANIMATION --- */
+        #processModal .modal-content {
+            display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 300px;
+        }
+        
+        .loader {
+            border: 8px solid #f3f3f3; border-radius: 50%; border-top: 8px solid var(--primary-color);
+            width: 60px; height: 60px; animation: spin 1s linear infinite; margin-bottom: 20px;
+        }
+        
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .status-icon { font-size: 4rem; margin-bottom: 15px; display: none; }
+        .status-success { color: var(--success); }
+        .status-fail { color: var(--danger); }
+        
+        .btn-support {
+            background: #229ED9; color: white; padding: 12px 20px; border-radius: 10px;
+            text-decoration: none; font-weight: bold; margin-top: 15px; display: inline-flex;
+            align-items: center; gap: 10px;
+        }
+
+        /* --- NEW: CLAIM MODAL STYLES --- */
+        .claim-modal-content {
+            background: linear-gradient(135deg, #fff 0%, #f0fdf4 100%);
+            border: 2px solid #ffd700;
+            text-align: center;
+        }
+        .claim-amount {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 10px 0;
+        }
+        .congrats-text {
+            color: #166534;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 100px; opacity: 1;} }
+        @keyframes fadeout { from {bottom: 100px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+    </style>
+</head>
+<body>
+
+    <div id="authModal" class="modal" style="display:block;">
+        <div class="modal-content animate-up">
+            <div class="modal-header">
+                <i class="fa-solid fa-eye" style="font-size: 3rem; color: rgba(14, 13, 13, 0.61); margin-bottom: 10px; text-shadow: 0 0 10px rgba(253, 255, 254, 0.76);"></i>
+                <h2 id="authTitle">Lyu Optics</h2>
+                <p style="color: #fcfcfd; margin-bottom: 20px;">Secure Vision Investment</p>
+            </div>
+            
+            <div id="loginForm">
+                <div class="phone-input-group">
+                    <span class="phone-prefix">+251</span>
+                    <input type="tel" id="loginPhone" placeholder="9xxxxxxxx" maxlength="9">
+                </div>
+                <input type="password" id="loginPass" placeholder="Password">
+                <button class="btn-full" onclick="login()">Login</button>
+                <p style="margin-top:15px; font-size:0.9rem;">
+                    No account? <a href="#" onclick="toggleAuth('signup')" style="color:white; font-weight:bold; text-decoration:underline;">Register</a>
+                </p>
+            </div>
+
+            <div id="signupForm" style="display:none;">
+                <div class="input-with-icon">
+                    <i class="fa-solid fa-user"></i>
+                    <input type="text" id="regName" placeholder="Full Name">
+                </div>
+                
+                <div class="phone-input-group">
+                    <i class="fa-solid fa-mobile-screen" style="color:var(--primary-color); margin-right:10px;"></i>
+                    <span class="phone-prefix">+251</span>
+                    <input type="tel" id="regPhone" placeholder="9xxxxxxxx" maxlength="9">
+                </div>
+                
+                <div class="input-with-icon">
+                    <i class="fa-solid fa-lock"></i>
+                    <input type="password" id="regPass" placeholder="Create Password">
+                </div>
+                
+                <div class="input-with-icon">
+                    <i class="fa-solid fa-key"></i>
+                    <input type="password" id="regPassConfirm" placeholder="Confirm Password">
+                </div>
+                
+                <div class="input-with-icon">
+                    <i class="fa-solid fa-share-nodes"></i>
+                    <input type="text" id="regRef" placeholder="Invite Code (Optional)">
+                </div>
+
+                <button class="btn-full" onclick="signup()">Create Account</button>
+                <p style="margin-top:15px; font-size:0.9rem;">
+                    Have account? <a href="#" onclick="toggleAuth('login')" style="color:white; font-weight:bold; text-decoration:underline;">Login</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div id="claimSuccessModal" class="modal" style="z-index: 5000;">
+        <div class="modal-content claim-modal-content animate-up">
+            <i class="fa-solid fa-trophy" style="font-size: 4rem; color: #ffd700; margin-bottom: 15px; animation: bounce 2s infinite;"></i>
+            <div class="congrats-text">Congratulations!</div>
+            <p id="claimModalDesc" style="color:#666;">You have successfully claimed today's profit.</p>
+            <div class="claim-amount">ETB <span id="claimModalAmount">0.00</span></div>
+            <button class="btn-full" onclick="closeClaimModal()" style="background: linear-gradient(45deg, #FFD700, #FFA500); box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);">Awesome!</button>
+        </div>
+    </div>
+
+    <div id="telegramModal" class="modal" style="z-index: 4000;">
+        <div class="modal-content animate-up" style="background: linear-gradient(180deg, #ffffff 0%, #f0f9ff 100%); border: 2px solid var(--primary-color);">
+            <span class="close" onclick="closeModal('telegramModal')">&times;</span>
+            
+            <div style="text-align:center;">
+                <img src="https://cdn-icons-png.flaticon.com/512/2111/2111646.png" style="width: 60px; margin-bottom: 10px;">
+                <h2 style="color:var(--primary-dark); font-weight:800;">Welcome to Lyu Optics</h2>
+                <p style="color:#666; font-size:0.9rem;">Join our community & earn passive income!</p>
+            </div>
+            
+            <div style="background: #fffbeb; border-radius: 12px; padding: 15px; margin: 15px 0 10px 0; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px dashed #f59e0b;">
+                <h4 style="color:#b45309; margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px;">
+                    <i class="fa-solid fa-gift" style="color:#f59e0b;"></i> Invitation Commission
+                </h4>
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;">
+                    <span>Level 1 (Direct)</span>
+                    <span style="font-weight:bold; color:#fff; background:#f59e0b; padding:2px 8px; border-radius:4px;">11%</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;">
+                    <span>Level 2 (Team)</span>
+                    <span style="font-weight:bold; color:#fff; background:#f59e0b; padding:2px 8px; border-radius:4px;">3%</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:0.9rem;">
+                    <span>Level 3 (Team)</span>
+                    <span style="font-weight:bold; color:#fff; background:#f59e0b; padding:2px 8px; border-radius:4px;">1%</span>
+                </div>
+            </div>
+
+            <div style="background: white; border-radius: 12px; padding: 15px; margin: 10px 0 15px 0; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px dashed var(--primary-color);">
+                <h4 style="color:var(--primary-color); margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px;">
+                    <i class="fa-solid fa-fire" style="color:orange;"></i> Invitation Bonus
+                </h4>
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;">
+                    <span>Level 1 (Direct)</span>
+                    <span style="font-weight:bold; color:#166534; background:#dcfce7; padding:2px 8px; border-radius:4px;">13,50%</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;">
+                    <span>Level 2 (Team)</span>
+                    <span style="font-weight:bold; color:#1e40af; background:#dbeafe; padding:2px 8px; border-radius:4px;">3%</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:0.9rem;">
+                    <span>Level 3 (Team)</span>
+                    <span style="font-weight:bold; color:#991b1b; background:#fee2e2; padding:2px 8px; border-radius:4px;">1%</span>
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <a href="https://t.me/YOUR_CHANNEL_LINK" target="_blank" class="btn-full" style="margin:0; background: #229ED9; font-size:0.9rem;">
+                    <i class="fa-solid fa-paper-plane"></i> Channel
+                </a>
+                <a href="https://t.me/YOUR_GROUP_LINK" target="_blank" class="btn-full" style="margin:0; background: #0088cc; font-size:0.9rem;">
+                    <i class="fa-solid fa-users"></i> Group
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div id="processModal" class="modal" style="z-index: 3000;">
+        <div class="modal-content animate-up">
+            <div id="loaderSpinner" class="loader"></div>
+            
+            <i id="iconSuccess" class="fa-solid fa-circle-check status-icon status-success"></i>
+            <i id="iconFail" class="fa-solid fa-circle-xmark status-icon status-fail"></i>
+
+            <h3 id="processTitle">Verifying Payment...</h3>
+            <p id="processDesc" style="color:#666; font-size:0.9rem; margin-top:5px;">Please wait while we confirm your transaction. Do not close this page.</p>
+            
+            <div id="processTimer" style="font-weight:bold; font-size:1.2rem; color:var(--primary-color); margin-top:10px;">01:00</div>
+
+            <a id="supportBtn" href="https://t.me/YOUR_TELEGRAM_USERNAME" target="_blank" class="btn-support" style="display:none;">
+                <i class="fa-brands fa-telegram"></i> Contact Customer Service
+            </a>
+            
+            <button id="closeProcessBtn" onclick="closeProcessModal()" style="background:none; border:none; color:#999; margin-top:20px; cursor:pointer; text-decoration:underline; display:none;">Close</button>
+        </div>
+    </div>
+
+    <div id="app" style="display:none;">
+        
+        <header>
+            <div class="logo"><i class="fa-solid fa-eye"></i> Lyu Optics</div>
+            <div class="user-pill" onclick="switchView('profile')">
+                <i class="fa-solid fa-user"></i> <span id="headerName">User</span>
+            </div>
+        </header>
+
+        <section id="view-home" class="view-section active-view animate-up">
+            <div class="hero">
+                <img id="slideImg" src="https://images.unsplash.com/photo-1572635196237-14b3f281503f?auto=format&fit=crop&w=800&q=80" alt="Eyewear">
+                <div class="hero-text">
+                    <h2 data-lang="heroTitle">See The Future</h2>
+                    <p data-lang="heroSub">Profitable Vision Technology</p>
+                </div>
+            </div>
+
+            <div class="dashboard">
+                <div class="stat-card">
+                    <h3 data-lang="balance">Balance</h3>
+                    <div class="value">ETB <span id="displayBalance">0.00</span></div>
+                </div>
+                <div class="stat-card">
+                    <h3 data-lang="income">Income</h3>
+                    <div class="value">ETB <span id="displayIncome">0.00</span></div>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn-main btn-deposit" onclick="switchView('deposit')">
+                    <img src="https://cdn-icons-png.flaticon.com/512/2382/2382461.png" width="25" height="25" alt="Wallet"> 
+                    <span data-lang="deposit">Deposit</span>
+                </button>
+                <button class="btn-main btn-withdraw" onclick="switchView('withdraw')">
+                    <img src="https://cdn-icons-png.flaticon.com/512/5372/5372516.png" width="25" height="25" alt="Withdraw">
+                    <span data-lang="withdraw">Withdraw</span>
+                </button>
+            </div>
+
+            <div class="secondary-buttons">
+                <button class="btn-secondary" onclick="window.open('https://t.me/YOUR_SUPPORT_USERNAME', '_blank')">
+                    <i class="fa-brands fa-telegram"></i>
+                    <span data-lang="service">Telegram Service</span>
+                </button>
+                <button class="btn-secondary" onclick="switchView('gift')">
+                    <img src="https://cdn-icons-png.flaticon.com/512/3209/3209955.png" width="25" height="25" alt="Gift">
+                    <span data-lang="gift">Gift Code</span>
+                </button>
+            </div>
+            
+            <div class="about-section">
+                <div class="about-header">
+                    <i class="fa-solid fa-circle-info"></i> About Lyu Optics
+                </div>
+                
+                <div class="scroll-container">
+                    <div class="about-card">
+                        <img src="https://images.unsplash.com/photo-1550009158-9ebf69173e03?auto=format&fit=crop&w=800&q=80" class="about-img">
+                        <div class="about-content">
+                            <h4>Global Technology</h4>
+                            <p>Leading the optical industry with cutting-edge electronics and vision AI integration.</p>
+                        </div>
+                    </div>
+                    <div class="about-card">
+                        <img src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=800&q=80" class="about-img">
+                        <div class="about-content">
+                            <h4>Sustainable Growth</h4>
+                            <p>Our eco-friendly manufacturing ensures long-term profit and environmental safety.</p>
+                        </div>
+                    </div>
+                    <div class="about-card">
+                        <img src="https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=800&q=80" class="about-img">
+                        <div class="about-content">
+                            <h4>Expert Team</h4>
+                            <p>Managed by top financial experts and optical engineers from around the world.</p>
+                        </div>
+                    </div>
+                     <div class="about-card">
+                        <img src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&w=800&q=80" class="about-img">
+                        <div class="about-content">
+                            <h4>Secure Investment</h4>
+                            <p>Join thousands of investors earning daily passive income with verified security.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="padding: 20px; text-align:center; color:#666;">
+                <p data-lang="homeNote">Welcome! Go to the <b>Shop</b> to view available products.</p>
+            </div>
+        </section>
+
+        <section id="view-gift" class="view-section animate-up">
+            <div class="page-banner gift-bg">
+                <button class="back-btn" onclick="switchView('home')">
+                    <i class="fa-solid fa-arrow-left"></i> Back
+                </button>
+            </div>
+            
+            <div class="page-content">
+                <div class="gift-header-card">
+                    <div class="gift-icon-lg"><i class="fa-solid fa-gift"></i></div>
+                    <h2>Gift Center</h2>
+                    <p style="opacity:0.9;">Redeem exclusive rewards here.</p>
+                </div>
+
+                <div class="code-input-box">
+                    <h4 style="margin-bottom:10px; color:#555;">Enter Your Code</h4>
+                    <input type="text" id="userGiftInput" placeholder="e.g. LYU-2024" style="text-align:center; text-transform:uppercase; font-weight:bold; letter-spacing:1px; font-size:1.1rem;">
+                    <button class="btn-full" onclick="redeemGiftCode()">Redeem Now</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-withdraw" class="view-section animate-up">
+            <div class="page-banner withdraw-bg">
+                <button class="back-btn" onclick="switchView('home')">
+                    <i class="fa-solid fa-arrow-left"></i> Back
+                </button>
+            </div>
+            
+            <div class="page-content">
+                <div class="page-card">
+                    <p style="color:#666; font-size:0.9rem; text-transform:uppercase;">Available Balance</p>
+                    <h2 style="font-size:2rem; color:var(--primary-dark); margin:5px 0 15px;">ETB <span id="withDisplayBal">0.00</span></h2>
+                    
+                    <div style="background:#f0f9ff; padding:10px; border-radius:10px; font-size:0.85rem; color:#0369a1; margin-bottom:15px;">
+                        <i class="fa-solid fa-circle-info"></i> Funds will be sent to your bound Bank Card.
+                    </div>
+                    
+                    <div style="background:#fff7ed; padding:10px; border-radius:10px; font-size:0.85rem; color:#c2410c; margin-bottom:15px; border:1px solid #ffedd5;">
+                        <i class="fa-solid fa-percent"></i> Withdrawal Fee: 11% | Min: ETB 150
+                    </div>
+
+                    <div id="withdrawInputs">
+                        <label style="display:block; text-align:left; font-size:0.85rem; font-weight:bold; color:#555; margin-left:5px;">Amount</label>
+                        <input type="number" id="withAmount" placeholder="Enter Amount (ETB)">
+                        
+                        <label style="display:block; text-align:left; font-size:0.85rem; font-weight:bold; color:#555; margin-left:5px; margin-top:10px;">Withdrawal Password</label>
+                        <input type="password" id="withAuthPass" placeholder="Enter Password">
+                        
+                        <button class="btn-full" onclick="submitWithdraw()" data-lang="submit">Submit Request</button>
+                    </div>
+
+                    <div id="withdrawMsg" style="display:none; color:red; font-size:0.9rem; margin-top:10px;">
+                        <i class="fa-solid fa-triangle-exclamation"></i> Please bind your bank card first!
+                        <button class="btn-full" style="margin-top:10px; background:var(--primary-dark);" onclick="switchView('bankcard');">Bind Card Now</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-deposit" class="view-section animate-up">
+            <div class="page-banner deposit-bg">
+                <button class="back-btn" onclick="switchView('home')">
+                    <i class="fa-solid fa-arrow-left"></i> Back
+                </button>
+            </div>
+
+            <div class="page-content">
+                <div class="page-card">
+                    <h2 style="color:var(--primary-dark); margin-bottom:15px;">Deposit Funds</h2>
+                    
+                    <div id="depositStep1">
+                        <p style="color:#666; font-size:0.9rem; margin-bottom:15px;">Select a bank and transfer funds (Min: 650)</p>
+                        
+                        <div id="allBankCardsContainer">
+                            <p style="color:#999; padding:20px;">Loading bank accounts...</p>
+                        </div>
+
+                        <label style="display:block; text-align:left; font-size:0.85rem; font-weight:bold; color:#555; margin-left:5px;">Enter Deposit Amount</label>
+                        <input type="number" id="depAmountPage" placeholder="Amount (Birr)">
+                        
+                        <button class="btn-full" onclick="nextDepositStep()" style="margin-top:20px;">I have made the transfer <i class="fa-solid fa-arrow-right"></i></button>
+                    </div>
+
+                    <div id="depositStep2" style="display:none;">
+                        <div style="background:#f0fdf4; color:#166534; padding:15px; border-radius:10px; margin-bottom:20px;">
+                            <i class="fa-solid fa-check-circle"></i> Please enter the transaction reference number from your bank SMS to verify.
+                        </div>
+
+                        <label style="display:block; text-align:left; font-size:0.85rem; font-weight:bold; color:#555; margin-left:5px;">Sender Full Name</label>
+                        <input type="text" id="depSenderName" placeholder="Full Name (As on Bank Account)">
+
+                        <label style="display:block; text-align:left; font-size:0.85rem; font-weight:bold; color:#555; margin-left:5px; margin-top:10px;">Transaction ID / Ref Number</label>
+                        <input type="text" id="depTransIdPage" placeholder="Enter ID here...">
+                        
+                        <button class="btn-full" onclick="submitDepositFromPage()" data-lang="confirmDep">Confirm Deposit</button>
+                        <button style="background:none; border:none; color:#666; margin-top:15px; cursor:pointer; text-decoration:underline;" onclick="prevDepositStep()">Go Back</button>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <section id="view-shop" class="view-section animate-up">
+            <div class="page-banner shop-bg">
+                <button class="shop-header-btn" onclick="switchView('orders')">
+                    <i class="fa-solid fa-list"></i> My Orders
+                </button>
+            </div>
+
+            <div class="page-content">
+                <div class="page-card" style="margin-bottom: 20px;"> 
+                    <div class="section-title" style="margin:0; padding:0; justify-content:center; color: var(--text-dark); text-shadow:none;">
+                        <i class="fa-solid fa-bag-shopping"></i> <span data-lang="plans">products</span>
+                    </div>
+                </div>
+                
+                <div class="package-list" id="shopPlanList" style="padding: 0;">
+                    <div style="text-align:center; padding:20px; color:#999; grid-column: span 2;">Loading plans...</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-orders" class="view-section animate-up">
+            <div class="page-banner orders-bg">
+                <button class="back-btn" onclick="switchView('shop')">
+                    <i class="fa-solid fa-arrow-left"></i> Back
+                </button>
+            </div>
+
+             <div class="page-content">
+                <div class="page-card" style="margin-top:-40px;">
+                    <h2 style="color:var(--primary-dark);">My Orders</h2>
+                    <p style="color:#666; font-size:0.9rem;">Track your active investments.</p>
+                </div>
+
+                <div id="myOrdersList">
+                    <p style="text-align:center; color:#999; padding:20px;">Loading your investments...</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-task" class="view-section animate-up">
+            <div class="section-title" style="margin-top:20px;">
+                <i class="fa-solid fa-users-viewfinder"></i> <span data-lang="tasks">Team VIP Tasks</span>
+            </div>
+            
+            <div style="padding: 0 20px; margin-bottom:10px;">
+                <div style="background:var(--accent-color); padding:10px; border-radius:10px; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="font-size:0.9rem; font-weight:bold; color:var(--primary-dark);">
+                        <i class="fa-solid fa-user-check"></i> <span data-lang="activeRef">Active Investors</span>
+                    </div>
+                    <div style="font-size:1.2rem; font-weight:bold; color:var(--primary-color);" id="myActiveReferrals">0</div>
+                </div>
+            </div>
+
+            <div id="team-task-list">
+                <div style="text-align:center; padding:20px; color:#999;">Loading tasks...</div>
+            </div>
+            
+            <div class="task-card">
+                <div class="task-icon"><i class="fa-solid fa-calendar-check"></i></div>
+                <div class="task-content">
+                    <h4 data-lang="taskCheckin">Daily Check-in</h4>
+                    <p>Reward: ETB 4.00 Bonus</p>
+                </div>
+                <button class="btn-task" onclick="dailyCheckIn()">Claim</button>
+            </div>
+        </section>
+
+        <section id="view-invite" class="view-section animate-up">
+            <div class="page-banner invite-bg">
+                <button class="back-btn" onclick="switchView('task')">
+                    <i class="fa-solid fa-arrow-left"></i> Back
+                </button>
+            </div>
+
+            <div class="page-content">
+                <div class="page-card">
+                    <h2 style="color:var(--primary-dark);">Invite Friends</h2>
+                    <p style="color:#666; font-size:0.9rem; margin-bottom:20px;">Build your team and earn high commissions!</p>
+
+                    <div style="margin-bottom:20px;">
+                         <i class="fa-solid fa-qrcode" style="font-size:6rem; color:var(--text-light); opacity:0.3;"></i>
+                    </div>
+
+                    <label style="font-size:0.8rem; font-weight:bold; color:#555;">Your Referral Code</label>
+                    <div class="invite-box">
+                         <div class="invite-code-text" id="invitePageCode">...</div>
+                         <small style="color:#888;">Share this code with your friends</small>
+                    </div>
+
+                    <button class="btn-full" onclick="copyRefLink()">
+                        <i class="fa-regular fa-copy"></i> Copy Invitation Link
+                    </button>
+
+                    <div style="display:flex; justify-content:center; gap:20px; margin-top:25px;">
+                        <i class="fa-brands fa-telegram" style="font-size:2rem; color:#229ED9;"></i>
+                        <i class="fa-brands fa-whatsapp" style="font-size:2rem; color:#25D366;"></i>
+                        <i class="fa-brands fa-facebook" style="font-size:2rem; color:#1877F2;"></i>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-history" class="view-section animate-up">
+            <div style="padding: 20px;">
+                <button class="back-btn" onclick="switchView('profile')">
+                    <i class="fa-solid fa-arrow-left"></i> Back
+                </button>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+                    <h2 style="color:white; text-shadow:0 1px 3px rgba(0,0,0,0.5);" data-lang="menuDepHist">Transaction History</h2>
+                </div>
+            </div>
+
+            <div class="history-tabs-container">
+                <button class="h-tab active" onclick="filterHistoryPage('all', this)">All</button>
+                <button class="h-tab" onclick="filterHistoryPage('deposit', this)">Deposit</button>
+                <button class="h-tab" onclick="filterHistoryPage('withdraw', this)">Withdraw</button>
+            </div>
+
+            <div id="fullHistoryList">
+                <p style="text-align:center; color:#999;">Loading...</p>
+            </div>
+        </section>
+
+        <section id="view-income" class="view-section animate-up">
+            <div class="page-banner income-bg">
+                <button class="back-btn" onclick="switchView('profile')">
+                    <i class="fa-solid fa-arrow-left"></i> Back
+                </button>
+            </div>
+
+             <div class="page-content">
+                <div class="page-card" style="margin-top:-40px;">
+                    <h2 style="color:var(--primary-dark);" data-lang="menuWithHist">Income History</h2>
+                    <p style="color:#666; font-size:0.9rem;">My Active Investments</p>
+                    
+                    <div style="margin-top:15px; padding:15px; background:var(--accent-color); border-radius:10px; box-shadow:inset 0 0 5px rgba(0,0,0,0.05);">
+                        <small style="color:var(--primary-dark); font-weight:bold;">Total Income Generated</small>
+                        <div style="font-size:1.5rem; font-weight:bold; color:var(--primary-color);">ETB <span id="incomePageTotal">0.00</span></div>
+                    </div>
+                </div>
+
+                <div id="incomePageList">
+                    <p style="text-align:center; color:#999;">Loading...</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-bankcard" class="view-section animate-up">
+            <div style="padding: 20px;">
+                <button class="back-btn" onclick="switchView('profile')">
+                    <i class="fa-solid fa-arrow-left"></i> Back
+                </button>
+                <h2 style="color:white; text-shadow:0 1px 3px rgba(0,0,0,0.5); margin-bottom: 10px;" data-lang="menuBank">Bank Card</h2>
+                <p style="color:#f0f0f0; text-shadow:0 1px 3px rgba(0,0,0,0.5); font-size:0.9rem; margin-bottom:20px;">Bind your bank details for withdrawal.</p>
+                
+                <div style="background:white; padding:20px; border-radius:15px; box-shadow:var(--shadow);">
+                    <label style="font-size:0.8rem; font-weight:bold; color:#555;">Bank Name</label>
+                    <input type="text" id="bindBankName" placeholder="e.g. CBE / Telebirr">
+                    
+                    <label style="font-size:0.8rem; font-weight:bold; color:#555; margin-top:10px; display:block;">Account Name</label>
+                    <input type="text" id="bindAccName" placeholder="Full Name">
+                    
+                    <label style="font-size:0.8rem; font-weight:bold; color:#555; margin-top:10px; display:block;">Account Number</label>
+                    <input type="number" id="bindAccNum" placeholder="Account Number">
+
+                    <label style="font-size:0.8rem; font-weight:bold; color:var(--primary-color); margin-top:15px; display:block;">Withdrawal Password</label>
+                    <input type="password" id="bindWithPass" placeholder="Set a Withdrawal Password">
+                    
+                    <button class="btn-full" onclick="saveBankInfo()" style="margin-top:20px;">Save Information</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-menu" class="view-section animate-up">
+            <div class="page-banner menu-bg">
+                <button class="back-btn" onclick="switchView('profile')">
+                    <i class="fa-solid fa-arrow-left"></i> Back
+                </button>
+            </div>
+            
+            <div class="page-content">
+                <div class="page-card" style="margin-top:-40px;">
+                    <h2 style="color:var(--primary-dark);">Menu</h2>
+                    <p style="color:#666; font-size:0.9rem;">Settings & History</p>
+                </div>
+
+                <div class="menu-list-container">
+                    <div class="menu-item" onclick="switchView('bankcard')">
+                        <span data-lang="menuBank">Bank Card / የባንክ መረጃ</span> <i class="fa-solid fa-building-columns"></i>
+                    </div>
+
+                    <div class="menu-item" onclick="switchView('history')">
+                        <span data-lang="menuDepHist">Transaction History</span> <i class="fa-solid fa-chevron-right"></i>
+                    </div>
+                    <div class="menu-item" onclick="switchView('income')">
+                        <span data-lang="menuWithHist">Income History</span> <i class="fa-solid fa-chevron-right"></i>
+                    </div>
+                    <div class="menu-item" onclick="openModal('langModal')">
+                        <span data-lang="menuLang">Language / ቋንቋ</span> <i class="fa-solid fa-globe"></i>
+                    </div>
+                    <div class="menu-item" onclick="window.location.reload()">
+                        <span style="color:red;" data-lang="logout">Log Out</span> <i class="fa-solid fa-right-from-bracket" style="color:red;"></i>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-profile" class="view-section animate-up">
+            <div class="menu-btn-container">
+                <i class="fa-solid fa-bars" onclick="switchView('menu')" style="font-size: 1.6rem; color: white; text-shadow:0 0 5px rgba(0,0,0,0.5); cursor: pointer; padding: 10px;"></i>
+            </div>
+
+            <div class="profile-header">
+                <div class="profile-avatar"><i class="fa-solid fa-user"></i></div>
+                <h2 id="profileName">User Name</h2>
+                <p id="profilePhone" style="color:#666;">0911000000</p>
+                <div style="margin-top:15px; font-weight:bold; color:var(--primary-color);">
+                    My Code: <span id="myRefCode">...</span> 
+                    <i class="fa-regular fa-copy" onclick="copyRefLink()" style="cursor:pointer; margin-left:5px;"></i>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <small>Total Recharge</small>
+                    <h3 id="profTotDep">0.00</h3>
+                </div>
+                <div class="stat-box">
+                    <small>Total Withdraw</small>
+                    <h3 id="profTotWith">0.00</h3>
+                </div>
+                
+                <div class="stat-box">
+                    <small>Total Income</small>
+                    <h3 id="profTotInc">0.00</h3>
+                </div>
+                <div class="stat-box">
+                    <small>Today's Profit</small>
+                    <h3 id="profTodayProf">0.00</h3>
+                </div>
+
+                <div class="stat-box full-width-stat">
+                    <div style="text-align:left;">
+                        <small>Daily Profit</small>
+                        <h3 id="profDailyEst">0.00</h3>
+                    </div>
+                    <i class="fa-solid fa-chart-line" style="font-size:1.5rem; color:var(--primary-color); opacity:0.3;"></i>
+                </div>
+            </div>
+
+            <div class="section-title" style="margin-top:10px;">
+                <i class="fa-solid fa-users"></i> Team Data
+            </div>
+
+            <div class="stats-grid" style="margin-bottom: 30px;">
+                <div class="stat-box">
+                    <small>Total Team</small>
+                    <h3 id="teamTotalCnt">0</h3>
+                </div>
+                <div class="stat-box">
+                    <small>Investor Team</small>
+                    <h3 id="teamInvestCnt">0</h3>
+                </div>
+                <div class="stat-box full-width-stat">
+                     <div style="text-align:left;">
+                        <small>Total Commission</small>
+                        <h3 id="teamTotComm">0.00</h3>
+                    </div>
+                    <i class="fa-solid fa-hand-holding-dollar" style="font-size:1.5rem; color:var(--primary-color); opacity:0.3;"></i>
+                </div>
+                
+                <div class="stat-box full-width-stat" style="display:block; text-align:left;">
+                    <div class="level-row">
+                        <span><i class="fa-solid fa-layer-group"></i> Level 1</span>
+                        <strong id="lvl1Cnt">0</strong>
+                    </div>
+                    <div class="level-row">
+                        <span><i class="fa-solid fa-layer-group"></i> Level 2</span>
+                        <strong id="lvl2Cnt">0</strong>
+                    </div>
+                    <div class="level-row">
+                        <span><i class="fa-solid fa-layer-group"></i> Level 3</span>
+                        <strong id="lvl3Cnt">0</strong>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <section id="view-admin" class="view-section animate-up">
+            <div class="section-title" style="margin-top:20px; color: var(--primary-color);">
+                <i class="fa-solid fa-shield-halved"></i> Admin Dashboard
+            </div>
+            <div style="padding: 0 20px;">
+                <p style="font-size: 0.9rem; color: #eee; margin-bottom: 10px; text-shadow:0 1px 2px rgba(0,0,0,0.5);">Control Panel (ETB Mode)</p>
+            </div>
+
+            <div class="admin-section-box">
+                <h4 style="margin-bottom:10px;"><i class="fa-solid fa-plus-circle"></i> Create Investment Plan</h4>
+                
+                <label style="font-size:0.8rem; font-weight:bold;">Plan Name</label>
+                <input type="text" id="adminPlanName" placeholder="e.g. VIP 1">
+
+                <label style="font-size:0.8rem; font-weight:bold;">Price (ETB)</label>
+                <input type="number" id="adminPlanPrice" placeholder="e.g. 1000">
+
+                <label style="font-size:0.8rem; font-weight:bold;">Daily ROI (ETB)</label>
+                <input type="number" id="adminPlanRoi" placeholder="e.g. 50">
+                
+                <label style="font-size:0.8rem; font-weight:bold;">Purchase Limit (Qty)</label>
+                <input type="number" id="adminPlanLimit" placeholder="e.g. 1 (How many times a user can buy)">
+                
+                <label style="font-size:0.8rem; font-weight:bold;">Image URL</label>
+                <input type="text" id="adminPlanImg" placeholder="https://...">
+
+                <button class="btn-full" onclick="createAdminPlan()">Publish Plan</button>
+            </div>
+            
+            <div class="admin-section-box">
+                <h4 style="margin-bottom:10px;"><i class="fa-solid fa-list-check"></i> Manage Existing Plans</h4>
+                <div id="adminExistingPlansList">
+                    <small>Loading plans...</small>
+                </div>
+            </div>
+
+            <div class="admin-section-box">
+                <h4 style="margin-bottom:10px;"><i class="fa-solid fa-gift"></i> Generate Gift Code</h4>
+                <p style="font-size:0.8rem; color:#666; margin-bottom:10px;">Create a single-use code for users.</p>
+                
+                <label style="font-size:0.8rem; font-weight:bold;">Amount (ETB)</label>
+                <input type="number" id="genAmount" placeholder="Enter Amount">
+
+                <button class="btn-full" style="background:#334155; margin-bottom:15px;" onclick="generateSingleUseCode()">Generate Code</button>
+                
+                <div class="code-display" id="generatedCodeDisplay" style="margin: 10px 0;">Waiting...</div>
+                <button class="btn-full" style="background:var(--success);" onclick="copyGeneratedCode()">Copy Code</button>
+            </div>
+
+            <div class="admin-section-box">
+                <h4 style="margin-bottom:10px;"><i class="fa-solid fa-credit-card"></i> Deposit Payment Settings</h4>
+                <p style="font-size:0.8rem; color:#666; margin-bottom:10px;">Add banks that users will send money to.</p>
+                
+                <label style="font-size:0.8rem; font-weight:bold;">Bank Name</label>
+                <input type="text" id="adminBankName" placeholder="e.g. CBE or Telebirr">
+                
+                <label style="font-size:0.8rem; font-weight:bold;">Account Holder Name</label>
+                <input type="text" id="adminAccountName" placeholder="e.g. Lyu Optics PLC">
+                
+                <label style="font-size:0.8rem; font-weight:bold;">Account Number</label>
+                <input type="text" id="adminAccountNum" placeholder="Account Number">
+                
+                <button class="btn-full" onclick="addNewPaymentMethod()">Add Payment Method</button>
+                
+                <div style="margin-top:20px;">
+                    <h5 style="color:#666; border-bottom:1px solid #eee; padding-bottom:5px;">Active Payment Methods</h5>
+                    <div id="adminExistingBanks" style="margin-top:10px;">
+                        <small>Loading...</small>
+                    </div>
+                </div>
+            </div>
+
+            <h4 style="margin: 20px 20px 10px; color:white; text-shadow:0 1px 2px rgba(0,0,0,0.5);">Pending Requests</h4>
+            <div id="adminRequestList">
+                <div style="text-align:center; padding:30px; color:#eee;">Loading requests...</div>
+            </div>
+            
+            <div style="margin: 20px; text-align: center;">
+                <button class="btn-full" style="background:#ef4444;" onclick="window.location.reload()">Admin Logout</button>
+            </div>
+        </section>
+
+        <div class="bottom-nav" id="bottomNav">
+            <div class="nav-item active" onclick="switchView('home')" id="nav-home">
+                <i class="fa-solid fa-house"></i><span data-lang="navHome">Home</span>
+            </div>
+            <div class="nav-item" onclick="switchView('shop')" id="nav-shop">
+                <i class="fa-solid fa-bag-shopping"></i><span data-lang="navShop">Shop</span>
+            </div>
+            <div class="nav-item" onclick="switchView('task')" id="nav-task">
+                <i class="fa-solid fa-list-check"></i><span data-lang="navTask">Task/reward</span>
+            </div>
+            <div class="nav-item" onclick="switchView('profile')" id="nav-profile">
+                <i class="fa-solid fa-user"></i><span data-lang="navProfile">Profile</span>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="editPlanModal" class="modal">
+        <div class="modal-content animate-up">
+            <span class="close" onclick="closeModal('editPlanModal')">&times;</span>
+            <h3 style="color:var(--primary-dark); margin-bottom:15px;">Edit Plan</h3>
+            
+            <label style="font-size:0.8rem; font-weight:bold; display:block; text-align:left;">Plan Name</label>
+            <input type="text" id="editPlanName">
+            
+            <label style="font-size:0.8rem; font-weight:bold; display:block; text-align:left;">Price (ETB)</label>
+            <input type="number" id="editPlanPrice">
+            
+            <label style="font-size:0.8rem; font-weight:bold; display:block; text-align:left;">Daily ROI</label>
+            <input type="number" id="editPlanRoi">
+
+            <label style="font-size:0.8rem; font-weight:bold; display:block; text-align:left;">Purchase Limit</label>
+            <input type="number" id="editPlanLimit">
+
+            <label style="font-size:0.8rem; font-weight:bold; display:block; text-align:left;">Image URL</label>
+            <input type="text" id="editPlanImg">
+            
+            <button class="btn-full" onclick="submitEditPlan()">Save Changes</button>
+        </div>
+    </div>
+
+    <div id="langModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('langModal')">&times;</span>
+            <h3>Select Language / ቋንቋ ይምረጡ</h3>
+            <br>
+            <div class="lang-option" onclick="changeLanguage('en')">
+                🇺🇸 English
+            </div>
+            <div class="lang-option" onclick="changeLanguage('am')">
+                🇪🇹 አማርኛ
+            </div>
+        </div>
+    </div>
+
+    <div id="toast">Notification</div>
+
+    <script>
+        // --- FIREBASE CONFIG ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyC0Yq5dljnp3Hk1_a4ggvc_6j2NX0Os-64",
+            authDomain: "invest-18810.firebaseapp.com",
+            projectId: "invest-18810",
+            storageBucket: "invest-18810.firebasestorage.app",
+            messagingSenderId: "39059892654",
+            appId: "1:39059892654:web:59db8925a246ed96efc03f",
+            measurementId: "G-T2Z4CH9WTY"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let currentUser = null;
+        let userData = {};
+        
+        // --- LANGUAGE SYSTEM ---
+        const translations = {
+            en: {
+                heroTitle: "See The Future",
+                heroSub: "Profitable Vision Technology",
+                balance: "Balance",
+                income: "Income",
+                deposit: "Deposit",
+                withdraw: "Withdraw",
+                service: "Telegram Service",
+                gift: "Gift Code",
+                homeNote: "Welcome! Go to the Shop to view available investment plans.",
+                depositTitle: "Deposit Funds",
+                depositSub: "Select a payment method.",
+                confirmDep: "Confirm Deposit",
+                plans: "Investment Plans",
+                tasks: "Team VIP Tasks",
+                activeRef: "Active Investors",
+                taskCheckin: "Daily Check-in",
+                menuDepHist: "Transaction History", 
+                menuWithHist: "Income History", 
+                menuLang: "Language / ቋንቋ",
+                menuBank: "Bank Card / Bank Info",
+                logout: "Log Out",
+                navHome: "Home",
+                navShop: "Shop",
+                navTask: "Task",
+                navProfile: "Profile",
+                withdrawTitle: "Withdraw Funds",
+                submit: "Submit Request",
+                invite: "Invite Friends",
+                claim: "Claim",
+                claimed: "Claimed"
+            },
+            am: {
+                heroTitle: "የወደፊቱን ይመልከቱ",
+                heroSub: "አትራፊ የቴክኖሎጂ ኢንቨስትመንት",
+                balance: "ቀሪ ሂሳብ",
+                income: "ጠቅላላ ገቢ",
+                deposit: "ገንዘብ አስገባ",
+                withdraw: "ገንዘብ አውጣ",
+                service: "ቴሌግራም አገልግሎት",
+                gift: "ስጦታ ኮድ",
+                homeNote: "እንኳን ደህና መጡ! እባክዎ ኢንቨስት ለማድረግ ወደ ሱቅ (Shop) ይሂዱ።",
+                depositTitle: "ገንዘብ ማስገቢያ",
+                depositSub: "የክፍያ አማራጭ ይምረጡ",
+                confirmDep: "አረጋግጥ",
+                plans: "የኢንቨስትመንት ጥቅሎች",
+                tasks: "የቡድን ሽልማቶች",
+                activeRef: "ኢንቨስት ያደረጉ ሰዎች",
+                taskCheckin: "ዕለታዊ አቴንዳንስ",
+                menuDepHist: "የግብይት ታሪክ",
+                menuWithHist: "የገቢ ታሪክ",
+                menuBank: "የባንክ ካርድ / መረጃ",
+                menuLang: "ቋንቋ / Language",
+                logout: "ውጣ",
+                navHome: "ዋና ገጽ",
+                navShop: "ሱቅ",
+                navTask: "ተግባር",
+                navProfile: "ፕሮፋይል",
+                withdrawTitle: "ገንዘብ ማውጫ",
+                submit: "ጠይቅ",
+                invite: "ጓደኛ ይጋብዙ",
+                claim: "ውሰድ",
+                claimed: "ተወስዷል"
+            }
+        };
+
+        let currentLang = localStorage.getItem('appLang') || 'en';
+
+        function changeLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('appLang', lang);
+            applyLanguage();
+            closeModal('langModal');
+            loadTeamTasks(); 
+            loadShopPlans(); // Reload shop text
+        }
+
+        function applyLanguage() {
+            const t = translations[currentLang];
+            document.querySelectorAll('[data-lang]').forEach(el => {
+                const key = el.getAttribute('data-lang');
+                if (t[key]) el.innerText = t[key];
+            });
+        }
+
+        // --- AUTH ---
+        function toggleAuth(mode) {
+            if(mode === 'signup') {
+                document.getElementById('loginForm').style.display = 'none';
+                document.getElementById('signupForm').style.display = 'block';
+                document.getElementById('authTitle').innerText = "Create Account";
+            } else {
+                document.getElementById('loginForm').style.display = 'block';
+                document.getElementById('signupForm').style.display = 'none';
+                document.getElementById('authTitle').innerText = "Welcome Back";
+            }
+        }
+
+        // --- CHECK FOR REFERRAL LINK ON LOAD ---
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const refCode = urlParams.get('ref');
+            if (refCode) {
+                toggleAuth('signup');
+                const refInput = document.getElementById('regRef');
+                if(refInput) {
+                    refInput.value = refCode;
+                    refInput.readOnly = true; 
+                }
+            }
+        };
+
+        function sanitizePhone(phone) { return phone.replace(/\D/g, ''); }
+
+        function login() {
+            const rawPhone = document.getElementById('loginPhone').value;
+            const pass = document.getElementById('loginPass').value;
+            
+            if(!rawPhone || !pass) return showToast("Please fill all fields");
+
+            // --- ADMIN LOGIN (Special Case) ---
+            if (rawPhone === '44' && pass === 'a444') {
+                const adminData = {
+                    name: "Administrator",
+                    phone: "44",
+                    isAdmin: true
+                };
+                initApp(adminData, "44");
+                showToast("Welcome Admin");
+                return;
+            }
+
+            // --- STANDARD USER LOGIN (+251) ---
+            // If user enters 911000000, we prepend 251 => 251911000000
+            const phone = "251" + sanitizePhone(rawPhone);
+
+            db.ref('users/' + phone).once('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data && data.password === pass) {
+                    initApp(data, phone);
+                } else {
+                    showToast("Invalid credentials");
+                }
+            });
+        }
+
+        function signup() {
+            const name = document.getElementById('regName').value;
+            const rawPhone = document.getElementById('regPhone').value;
+            const pass = document.getElementById('regPass').value;
+            const passConfirm = document.getElementById('regPassConfirm').value;
+            const refCode = document.getElementById('regRef').value;
+            
+            if(!rawPhone || !pass || !passConfirm || !name) return showToast("Fill required fields");
+            if(pass !== passConfirm) return showToast("Passwords do not match!");
+
+            // --- PHONE VALIDATION ---
+            // Must be exactly 9 digits AND start with 7 or 9
+            const phoneRegex = /^[79][0-9]{8}$/;
+            if (!phoneRegex.test(rawPhone)) {
+                return showToast("Phone must start with 9 or 7 and contain 9 digits.");
+            }
+
+            const phone = "251" + rawPhone; // Save as 251xxxxxxxxx
+
+            db.ref('users/' + phone).once('value', (snapshot) => {
+                if (snapshot.exists()) {
+                    showToast("Phone already registered");
+                } else {
+                    const newCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+                    // NEW: BONUS 100 on Registration
+                    const newUser = {
+                        name: name,
+                        phone: phone,
+                        password: pass,
+                        balance: 100,
+                        income: 0,
+                        commission: 0,
+                        refCode: newCode,
+                        referredBy: refCode || "admin",
+                        plans: {},
+                        claimedRewards: {}
+                    };
+                    db.ref('users/' + phone).set(newUser).then(() => {
+                        initApp(newUser, phone);
+                        showToast("Account created! Bonus 100 ETB added.");
+                    });
+                }
+            });
+        }
+
+        function initApp(data, phoneKey) {
+            currentUser = phoneKey;
+            userData = data;
+            document.getElementById('authModal').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
+            
+            applyLanguage(); 
+
+            // --- TRIGGER TELEGRAM POPUP ON LOGIN ---
+            setTimeout(() => {
+                openModal('telegramModal');
+            }, 1500);
+
+            // --- VIEW LOGIC ---
+            if(phoneKey === '44') {
+                document.getElementById('bottomNav').style.display = 'none';
+                document.getElementById('view-home').classList.remove('active-view');
+                document.getElementById('view-admin').classList.add('active-view');
+                listenForRequests();
+                loadAdminBankList(); // Load new multi-bank list
+                loadAdminPlans(); // Load Plans list for editing
+            } else {
+                document.getElementById('bottomNav').style.display = 'flex';
+                document.getElementById('view-admin').classList.remove('active-view');
+                document.getElementById('view-home').classList.add('active-view');
+                
+                db.ref('users/' + currentUser).on('value', (snap) => {
+                    userData = snap.val();
+                    updateUI();
+                });
+                
+                // Load Plans for Shop
+                loadShopPlans();
+                
+                // Load Team Tasks
+                loadTeamTasks();
+            }
+        }
+
+        function switchView(viewName) {
+            if(viewName === 'admin' && currentUser !== '44') return;
+
+            // Reset Deposit View (UPDATED FOR MULTI BANK)
+            if(viewName === 'deposit') {
+                document.getElementById('depositStep1').style.display = 'block';
+                document.getElementById('depositStep2').style.display = 'none';
+                document.getElementById('depAmountPage').value = "";
+                document.getElementById('depTransIdPage').value = "";
+                document.getElementById('depSenderName').value = "";
+                
+                // Fetch and Render All Admin Bank Cards
+                const bankContainer = document.getElementById('allBankCardsContainer');
+                bankContainer.innerHTML = "<p style='color:#999; padding:20px; text-align:center;'>Loading bank accounts...</p>";
+                
+                db.ref('settings/paymentMethods').once('value', (snap) => {
+                    bankContainer.innerHTML = "";
+                    if(!snap.exists()) {
+                        bankContainer.innerHTML = "<div style='padding:20px; text-align:center; color:red;'>No payment methods available. Contact Admin.</div>";
+                        return;
+                    }
+                    
+                    snap.forEach(child => {
+                        const bank = child.val();
+                        // Generate HTML for each bank card
+                        const html = `
+                        <div class="bank-info-card animate-up" style="margin-bottom:15px;">
+                            <div class="bank-info-row">
+                                <div>
+                                    <div class="bank-label">Bank Name</div>
+                                    <div class="bank-val">${bank.bankName}</div>
+                                </div>
+                                <i class="fa-solid fa-building-columns" style="font-size:1.5rem; opacity:0.8;"></i>
+                            </div>
+
+                            <div class="bank-info-row">
+                                <div>
+                                    <div class="bank-label">Account Name</div>
+                                    <div class="bank-val">${bank.accountName}</div>
+                                </div>
+                            </div>
+
+                            <div class="bank-info-row">
+                                <div>
+                                    <div class="bank-label">Account Number</div>
+                                    <div class="bank-val">${bank.accountNumber}</div>
+                                </div>
+                                <div class="copy-icon" onclick="copyString('${bank.accountNumber}')">
+                                    <i class="fa-regular fa-copy"></i>
+                                </div>
+                            </div>
+                        </div>`;
+                        bankContainer.insertAdjacentHTML('beforeend', html);
+                    });
+                });
+            }
+
+            // Withdraw View
+            if(viewName === 'withdraw') {
+                document.getElementById('withAmount').value = "";
+                document.getElementById('withAuthPass').value = "";
+                document.getElementById('withDisplayBal').innerText = parseFloat(userData.balance || 0).toFixed(2);
+                document.getElementById('withdrawInputs').style.display = 'block';
+                document.getElementById('withdrawMsg').style.display = 'none';
+            }
+            
+            // Invite View
+            if(viewName === 'invite') {
+                document.getElementById('invitePageCode').innerText = userData.refCode;
+            }
+
+            // IF PROFILE VIEW, LOAD DETAILED STATS
+            if(viewName === 'profile') {
+                calculateProfileStats();
+            }
+
+            // IF HISTORY VIEW, LOAD DATA
+            if(viewName === 'history') {
+                 loadFullHistoryPage('all');
+            }
+
+            // IF INCOME VIEW, LOAD DATA
+            if(viewName === 'income') {
+                loadIncomePage();
+            }
+
+            // IF ORDERS VIEW, LOAD ORDERS
+            if(viewName === 'orders') {
+                loadMyOrders();
+            }
+            
+            // IF BANK CARD VIEW, PREFILL
+            if(viewName === 'bankcard') {
+                if(userData.bankInfo) {
+                    document.getElementById('bindBankName').value = userData.bankInfo.bankName || "";
+                    document.getElementById('bindAccName').value = userData.bankInfo.accName || "";
+                    document.getElementById('bindAccNum').value = userData.bankInfo.accNum || "";
+                    document.getElementById('bindWithPass').value = userData.bankInfo.withdrawPass || "";
+                }
+            }
+
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active-view'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById('view-' + viewName).classList.add('active-view');
+            
+            // Map sub-pages to main nav items
+            let navId = 'nav-' + viewName;
+            if(viewName === 'invite') navId = 'nav-task';
+            if(viewName === 'orders') navId = 'nav-shop';
+            // NEW: Menu page also keeps Profile nav active
+            if(viewName === 'bankcard' || viewName === 'history' || viewName === 'income' || viewName === 'gift' || viewName === 'menu') navId = 'nav-profile';
+            
+            const navBtn = document.getElementById(navId);
+            if(navBtn) navBtn.classList.add('active');
+        }
+
+        function updateUI() {
+            document.getElementById('headerName').innerText = userData.name;
+            document.getElementById('profileName').innerText = userData.name;
+            document.getElementById('profilePhone').innerText = userData.phone;
+            document.getElementById('myRefCode').innerText = userData.refCode;
+            document.getElementById('displayBalance').innerText = parseFloat(userData.balance || 0).toFixed(2);
+            document.getElementById('displayIncome').innerText = parseFloat(userData.income || 0).toFixed(2);
+            document.getElementById('profTotInc').innerText = parseFloat(userData.income || 0).toFixed(2);
+            // Also update withdraw page bal
+            document.getElementById('withDisplayBal').innerText = parseFloat(userData.balance || 0).toFixed(2);
+            // Update Income Page Total
+            document.getElementById('incomePageTotal').innerText = parseFloat(userData.income || 0).toFixed(2);
+        }
+
+        function calculateProfileStats() {
+            // 1. Calculate Daily Profit Estimate based on Active Plans
+            let dailyProfit = 0;
+            if(userData.plans) {
+                for(let key in userData.plans) {
+                    if(userData.plans[key].active) {
+                        dailyProfit += parseFloat(userData.plans[key].daily || 0);
+                    }
+                }
+            }
+            document.getElementById('profDailyEst').innerText = dailyProfit.toFixed(2);
+            document.getElementById('profTodayProf').innerText = dailyProfit.toFixed(2);
+            document.getElementById('teamTotComm').innerText = parseFloat(userData.commission || 0).toFixed(2);
+
+
+            // 2. Fetch Requests for Withdraw/Deposit Totals
+            db.ref('requests').orderByChild('user').equalTo(currentUser).once('value', (snap) => {
+                let totDep = 0;
+                let totWith = 0;
+                if(snap.exists()) {
+                    snap.forEach(c => {
+                        const r = c.val();
+                        if(r.status === 'approve') {
+                            if(r.type === 'deposit') totDep += parseFloat(r.amount);
+                            if(r.type === 'withdraw') totWith += parseFloat(r.amount);
+                        }
+                    });
+                }
+                document.getElementById('profTotDep').innerText = totDep.toFixed(2);
+                document.getElementById('profTotWith').innerText = totWith.toFixed(2);
+            });
+
+            // 3. Team Calculations (ROBUST VERSION FOR CASE-INSENSITIVITY)
+            db.ref('users').once('value', (snap) => {
+                if(!snap.exists()) {
+                    // Reset stats if no users
+                    document.getElementById('lvl1Cnt').innerText = "0";
+                    document.getElementById('lvl2Cnt').innerText = "0";
+                    document.getElementById('lvl3Cnt').innerText = "0";
+                    document.getElementById('teamTotalCnt').innerText = "0";
+                    document.getElementById('teamInvestCnt').innerText = "0";
+                    return;
+                }
+                
+                const allUsers = [];
+                snap.forEach(c => allUsers.push(c.val()));
+                
+                // Helper to normalize strings (handle upper/lowercase mismatch)
+                const myCode = (userData.refCode || "").trim().toUpperCase();
+
+                // Lvl 1: Referred by ME
+                const lvl1 = allUsers.filter(u => (u.referredBy || "").trim().toUpperCase() === myCode);
+                
+                // Lvl 2: Referred by Lvl 1 Users
+                const lvl1Codes = lvl1.map(u => (u.refCode || "").trim().toUpperCase());
+                const lvl2 = allUsers.filter(u => lvl1Codes.includes((u.referredBy || "").trim().toUpperCase()));
+                
+                // Lvl 3: Referred by Lvl 2 Users
+                const lvl2Codes = lvl2.map(u => (u.refCode || "").trim().toUpperCase());
+                const lvl3 = allUsers.filter(u => lvl2Codes.includes((u.referredBy || "").trim().toUpperCase()));
+                
+                const totalTeam = lvl1.length + lvl2.length + lvl3.length;
+                
+                // Count Investors (Has active plans)
+                let investors = 0;
+                const wholeTeam = [...lvl1, ...lvl2, ...lvl3];
+
+                wholeTeam.forEach(u => {
+                   // Check if plans object exists and has at least one key
+                   if(u.plans && Object.keys(u.plans).length > 0) {
+                       investors++;
+                   }
+                });
+
+                document.getElementById('lvl1Cnt').innerText = lvl1.length;
+                document.getElementById('lvl2Cnt').innerText = lvl2.length;
+                document.getElementById('lvl3Cnt').innerText = lvl3.length;
+                document.getElementById('teamTotalCnt').innerText = totalTeam;
+                document.getElementById('teamInvestCnt').innerText = investors;
+            });
+        }
+
+        // --- TEAM TASK LOGIC (UPDATED: INVITE BUTTON AT TOP) ---
+        function loadTeamTasks() {
+            const milestones = [
+                { count: 3, reward: 120 },
+                { count: 6, reward: 240 },
+                { count: 15, reward: 1000 },
+                { count: 25, reward: 3000 },
+                { count: 50, reward: 12000 },
+                { count: 100, reward: 30000 }
+            ];
+
+            const taskContainer = document.getElementById('team-task-list');
+            
+            db.ref('users').orderByChild('referredBy').equalTo(userData.refCode).once('value', (snapshot) => {
+                let validReferrals = 0;
+                if(snapshot.exists()){
+                    snapshot.forEach((child) => {
+                        const u = child.val();
+                        if(u.plans && Object.keys(u.plans).length > 0) {
+                            validReferrals++;
+                        }
+                    });
+                }
+                
+                document.getElementById('myActiveReferrals').innerText = validReferrals;
+                taskContainer.innerHTML = ""; 
+
+                const t = translations[currentLang];
+
+                // --- NEW POSITION: INVITE BUTTON AT THE TOP ---
+                const inviteHtml = `
+                <div style="text-align:center; padding:10px; margin-bottom: 10px;">
+                    <button class="btn-full" onclick="switchView('invite')"><i class="fa-solid fa-share-nodes"></i> ${t.invite || 'Invite Friends'}</button>
+                </div>`;
+                taskContainer.insertAdjacentHTML('beforeend', inviteHtml);
+                // ----------------------------------------------
+
+                milestones.forEach((m) => {
+                    const isClaimed = userData.claimedRewards && userData.claimedRewards['r_' + m.count];
+                    const canClaim = validReferrals >= m.count;
+
+                    let btnState = "";
+                    let btnTxt = t.claim || "Claim";
+                    let onclick = `onclick="claimTeamReward(${m.count}, ${m.reward})"`;
+
+                    if(isClaimed) {
+                        btnState = "claimed";
+                        btnTxt = t.claimed || "Claimed";
+                        onclick = "";
+                    } else if (!canClaim) {
+                        btnState = "disabled";
+                        onclick = "";
+                    }
+
+                    let progress = (validReferrals / m.count) * 100;
+                    if(progress > 100) progress = 100;
+
+                    const titleText = `Invite ${m.count} Investors`;
+                    const subText = `${validReferrals}/${m.count} Users`;
+
+                    const html = `
+                    <div class="task-card">
+                        <div class="task-icon" style="background:${canClaim ? '#d1fae5' : '#E0F7FA'}; color:${canClaim ? '#10b981' : '#008080'}">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                        <div class="task-content">
+                            <h4>${titleText}</h4>
+                            <p style="color:var(--primary-color); font-weight:bold;">Reward: ETB ${m.reward}</p>
+                            <div style="width:100%; background:#eee; height:5px; border-radius:5px; margin-top:5px;">
+                                <div style="width:${progress}%; background:var(--primary-color); height:100%; border-radius:5px;"></div>
+                            </div>
+                            <p style="font-size:0.75rem; margin-top:2px;">${subText}</p>
+                        </div>
+                        <button class="btn-task ${btnState}" ${btnState} ${onclick}>${btnTxt}</button>
+                    </div>`;
+                    
+                    taskContainer.insertAdjacentHTML('beforeend', html);
+                });
+            });
+        }
+
+        function claimTeamReward(targetCount, amount) {
+            const rewardKey = 'r_' + targetCount;
+            if(userData.claimedRewards && userData.claimedRewards[rewardKey]) return;
+
+            const newBalance = (userData.balance || 0) + amount;
+            const updates = {};
+            updates['balance'] = newBalance;
+            updates['claimedRewards/' + rewardKey] = true;
+
+            db.ref('users/' + currentUser).update(updates).then(() => {
+                showToast(`Congratulations! Received ETB ${amount}`);
+                loadTeamTasks(); 
+                updateUI();
+            });
+        }
+        
+        // NEW: DAILY CHECK IN FUNCTION
+        function dailyCheckIn() {
+            const today = new Date().toDateString();
+            const lastCheck = localStorage.getItem('lastCheckIn_' + currentUser);
+            
+            if(lastCheck === today) {
+                return showToast("Already checked in today!");
+            }
+            
+            // Add 4 Birr
+            const newBal = (userData.balance || 0) + 4;
+            db.ref('users/' + currentUser).update({ balance: newBal }).then(() => {
+                localStorage.setItem('lastCheckIn_' + currentUser, today);
+                showToast("Checked In! Received ETB 4.00");
+                updateUI();
+            });
+        }
+        
+        // --- GIFT CODE LOGIC (UPDATED WITH SINGLE-USE) ---
+        function generateSingleUseCode() {
+            const amount = parseFloat(document.getElementById('genAmount').value);
+            // Single use logic is handled by setting maxUses = 1
+            const uses = 1; 
+            
+            if(!amount) return showToast("Enter Amount");
+
+            const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+            let result = "LYU-";
+            for (let i = 0; i < 4; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
+            result += "-";
+            for (let i = 0; i < 4; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
+            
+            const code = result;
+            
+            db.ref('giftCodes/' + code).set({
+                amount: amount,
+                maxUses: uses,
+                usedCount: 0
+            }).then(() => {
+                document.getElementById('generatedCodeDisplay').innerText = code;
+                showToast("Single-Use Code Generated!");
+            });
+        }
+
+        function copyGeneratedCode() {
+            const text = document.getElementById('generatedCodeDisplay').innerText;
+            if(text === 'Waiting...') return;
+            navigator.clipboard.writeText(text);
+            showToast("Code Copied!");
+        }
+
+        function redeemGiftCode() {
+            const input = document.getElementById('userGiftInput');
+            const code = input.value.trim().toUpperCase();
+            
+            if(!code) return showToast("Enter a code");
+            
+            const usedKey = 'gift_' + code;
+            if(userData.claimedRewards && userData.claimedRewards[usedKey]) {
+                return showToast("You already used this code!");
+            }
+            
+            db.ref('giftCodes/' + code).transaction((currentData) => {
+                if(currentData === null) return null; // Code doesn't exist
+                if(currentData.usedCount >= currentData.maxUses) return; // Max uses reached (This handles Single Use)
+                
+                return {
+                    ...currentData,
+                    usedCount: currentData.usedCount + 1
+                };
+            }, (error, committed, snapshot) => {
+                if(error) {
+                    showToast("Error redeeming code");
+                } else if(!committed) {
+                    showToast("Invalid or expired code");
+                } else {
+                    const val = snapshot.val();
+                    const bonus = val.amount;
+                    
+                    // Add Balance to User
+                    const newBal = (userData.balance || 0) + bonus;
+                    const updates = {};
+                    updates['balance'] = newBal;
+                    updates['claimedRewards/' + usedKey] = true;
+                    
+                    db.ref('users/' + currentUser).update(updates).then(() => {
+                        showToast(`Code Redeemed! +ETB ${bonus}`);
+                        input.value = "";
+                        
+                        triggerConfetti();
+                        showClaimSuccessModal(bonus, "You have successfully redeemed a gift code!");
+                        
+                        updateUI();
+                    });
+                }
+            });
+        }
+
+        // --- SHOP PLANS LOGIC (UPDATED: WITH LIMIT) ---
+        function loadShopPlans() {
+            db.ref('plans').on('value', (snapshot) => {
+                const container = document.getElementById('shopPlanList');
+                container.innerHTML = ""; 
+
+                if (!snapshot.exists()) {
+                    container.innerHTML = "<div style='text-align:center; padding:20px; color:#666; grid-column: span 2;'>No active plans.</div>";
+                    return;
+                }
+
+                snapshot.forEach((childSnap) => {
+                    const plan = childSnap.val();
+                    const key = childSnap.key;
+                    
+                    // Calculate how many times user bought this
+                    let purchasedCount = 0;
+                    if(userData.plans) {
+                        for(let pk in userData.plans) {
+                            if(userData.plans[pk].planId === key || pk === key) { // Check new format or old format
+                                purchasedCount++;
+                            }
+                        }
+                    }
+
+                    const limit = plan.limit || 1; // Default limit 1 if not set
+                    const isLimitReached = purchasedCount >= limit;
+                    
+                    let btnText = (currentLang === 'am' ? "ይግዙ" : "Invest");
+                    let btnDisabled = "";
+
+                    if (isLimitReached) {
+                        btnText = (currentLang === 'am' ? "ገደቡ ሞልቷል" : "Limit Reached");
+                        btnDisabled = "disabled";
+                    }
+                    
+                    let badgeLabel = "HOT";
+                    let badgeColor = "linear-gradient(45deg, #f59e0b, #d97706)";
+                    if(plan.price > 2000) {
+                         badgeLabel = "VIP";
+                         badgeColor = "linear-gradient(45deg, #8b5cf6, #6d28d9)";
+                    }
+
+                    const html = `
+                    <div class="package-card animate-up">
+                        <div class="pkg-badge" style="background:${badgeColor}">${badgeLabel}</div>
+                        <img src="${plan.img || 'https://via.placeholder.com/150'}" class="pkg-img">
+                        <div class="pkg-info">
+                            <h4>${plan.name}</h4>
+                            <div class="pkg-roi-box">
+                                Daily: ETB ${plan.roi}
+                            </div>
+                            <div class="pkg-price">ETB ${plan.price}</div>
+                            <div style="font-size:0.7rem; color:#666; margin-bottom:5px;">Limit: ${purchasedCount}/${limit}</div>
+                            <button class="btn-invest" ${btnDisabled} onclick="buyPlan('${key}', ${plan.price}, ${plan.roi}, ${limit})">${btnText}</button>
+                        </div>
+                    </div>
+                    `;
+                    container.insertAdjacentHTML('beforeend', html);
+                });
+            });
+        }
+
+        // --- MY ORDERS LOGIC (UPDATED: TO SUPPORT NEW KEY FORMAT) ---
+        function loadMyOrders() {
+            const container = document.getElementById('myOrdersList');
+            container.innerHTML = "";
+            
+            if (!userData.plans || Object.keys(userData.plans).length === 0) {
+                container.innerHTML = "<div style='text-align:center; padding:30px; color:#666;'>No active orders. Please invest first.</div>";
+                return;
+            }
+
+            const now = new Date();
+            const hour = now.getHours();
+            const todayStr = now.toDateString(); 
+            
+            const isOpen = (hour >= 6 && hour < 18); 
+            
+            db.ref('plans').once('value', (snap) => {
+                const allPlans = snap.val() || {};
+                
+                for(let key in userData.plans) {
+                    const uPlan = userData.plans[key];
+                    if(uPlan.active) {
+                        // Support New ID format (pid_timestamp) or Old (pid)
+                        const realPid = uPlan.planId || key;
+                        const pDetail = allPlans[realPid] || {name: "Active Plan", price: 0};
+                        
+                        // Check claim status
+                        const lastClaim = uPlan.lastClaimDate || "";
+                        const alreadyClaimed = (lastClaim === todayStr);
+                        
+                        let btnTxt = "Claim Profit";
+                        let btnState = "";
+                        let onClick = `onclick="claimDailyProfit('${key}', ${uPlan.daily})"`;
+                        
+                        if (alreadyClaimed) {
+                            btnTxt = "Claimed Today";
+                            btnState = "disabled";
+                        } else if (!isOpen) {
+                            btnTxt = "Closed (6AM-6PM)";
+                            btnState = "disabled";
+                        }
+                        
+                        const html = `
+                        <div class="order-card animate-up">
+                            <div class="order-header">
+                                <div class="order-title">${pDetail.name}</div>
+                                <div class="order-status">Active</div>
+                            </div>
+                            <div class="order-body">
+                                <div>
+                                    <div style="font-size:0.8rem; color:#666;">Daily Income</div>
+                                    <div style="font-size:1.1rem; font-weight:bold; color:var(--primary-dark);">ETB ${uPlan.daily}</div>
+                                </div>
+                                <button class="btn-claim" ${btnState} ${onClick}>${btnTxt}</button>
+                            </div>
+                            <div style="font-size:0.75rem; color:#999; margin-top:10px;">
+                                <i class="fa-solid fa-clock"></i> Claim daily between 12:00 (Morning) - 12:00 (Evening)
+                            </div>
+                        </div>`;
+                        container.insertAdjacentHTML('beforeend', html);
+                    }
+                }
+            });
+        }
+        
+        // --- NEW CLAIM FUNCTION WITH EFFECTS (UPDATED FOR REFERRAL COMMISSION) ---
+        function claimDailyProfit(planKey, amount) {
+            // Re-check time on click
+            const now = new Date();
+            const hour = now.getHours();
+            
+            if (hour < 6 || hour >= 18) {
+                return showToast("Claim time is over! Come back tomorrow at 6 AM.");
+            }
+            
+            const todayStr = now.toDateString();
+            
+            // Check if already claimed in DB (Double check)
+            if(userData.plans[planKey].lastClaimDate === todayStr) {
+                return showToast("Already claimed today!");
+            }
+            
+            const updates = {};
+            // User gets FULL Amount (No deduction)
+            updates['balance'] = (userData.balance || 0) + parseFloat(amount);
+            updates['income'] = (userData.income || 0) + parseFloat(amount);
+            updates['plans/' + planKey + '/lastClaimDate'] = todayStr;
+            
+            db.ref('users/' + currentUser).update(updates).then(() => {
+                
+                // --- NEW LOGIC: GIVE 8% TO REFERRER (WITHOUT DEDUCTING FROM USER) ---
+                if(userData.referredBy && userData.referredBy !== 'admin') {
+                    const commAmount = parseFloat(amount) * 0.08; // 8% of profit
+                    
+                    // Find Referrer by Code
+                    db.ref('users').orderByChild('refCode').equalTo(userData.referredBy).once('value', (snap) => {
+                        if(snap.exists()) {
+                            const refKey = Object.keys(snap.val())[0];
+                            const refData = snap.val()[refKey];
+                            
+                            // Add Commission to Referrer
+                            db.ref('users/' + refKey).update({
+                                balance: (refData.balance || 0) + commAmount,
+                                commission: (refData.commission || 0) + commAmount
+                            });
+                        }
+                    });
+                }
+                // --- END NEW LOGIC ---
+
+                // Trigger Effect and Modal
+                triggerConfetti();
+                showClaimSuccessModal(amount);
+                
+                loadMyOrders(); // Refresh buttons
+                updateUI();
+            });
+        }
+
+        function triggerConfetti() {
+            var duration = 3 * 1000;
+            var animationEnd = Date.now() + duration;
+            var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 6000 };
+
+            function randomInOut(min, max) { return Math.random() * (max - min) + min; }
+
+            var interval = setInterval(function() {
+                var timeLeft = animationEnd - Date.now();
+                if (timeLeft <= 0) return clearInterval(interval);
+                var particleCount = 50 * (timeLeft / duration);
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInOut(0.1, 0.3), y: Math.random() - 0.2 } }));
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInOut(0.7, 0.9), y: Math.random() - 0.2 } }));
+            }, 250);
+        }
+
+        function showClaimSuccessModal(amount, descText = "You have successfully claimed today's profit.") {
+            document.getElementById('claimModalAmount').innerText = parseFloat(amount).toFixed(2);
+            const descEl = document.getElementById('claimModalDesc');
+            if(descEl) descEl.innerText = descText;
+            document.getElementById('claimSuccessModal').style.display = 'block';
+        }
+
+        function closeClaimModal() {
+            document.getElementById('claimSuccessModal').style.display = 'none';
+        }
+
+        // --- DEPOSIT PAGE LOGIC (MULTI-STEP & LOADING) ---
+        function nextDepositStep() {
+            const amount = document.getElementById('depAmountPage').value;
+            // NEW: Min Deposit Check 650
+            if(!amount || amount < 650) return showToast("Minimum Deposit is ETB 650");
+            
+            document.getElementById('depositStep1').style.display = 'none';
+            document.getElementById('depositStep2').style.display = 'block';
+            document.getElementById('depositStep2').classList.add('animate-up');
+        }
+
+        function prevDepositStep() {
+            document.getElementById('depositStep2').style.display = 'none';
+            document.getElementById('depositStep1').style.display = 'block';
+        }
+
+        function submitDepositFromPage() {
+            const amount = parseFloat(document.getElementById('depAmountPage').value);
+            const txn = document.getElementById('depTransIdPage').value.trim(); // Trim whitespace
+            const senderName = document.getElementById('depSenderName').value;
+            
+            if(!amount || !txn || !senderName) return showToast("Please fill all details including Name");
+
+            // --- NEW CHECK: CHECK FOR DUPLICATE TXN ID ---
+            db.ref('requests').orderByChild('txnId').equalTo(txn).once('value', (snapshot) => {
+                if (snapshot.exists()) {
+                    showToast("Transaction ID already used! / ይህ መለያ ቁጥር ከዚህ በፊት ጥቅም ላይ ውሏል!");
+                    return;
+                } else {
+                    const reqData = {
+                        type: 'deposit',
+                        amount: amount,
+                        user: currentUser,
+                        phone: userData.phone || currentUser,
+                        senderName: senderName,
+                        txnId: txn,
+                        status: 'pending',
+                        timestamp: Date.now()
+                    };
+
+                    const reqRef = db.ref('requests').push();
+                    reqRef.set(reqData).then(() => {
+                        showProcessingModal(reqRef.key);
+                    });
+                }
+            });
+        }
+
+        // --- PROCESSING MODAL LOGIC ---
+        let processTimer;
+        let processInterval;
+
+        function showProcessingModal(reqKey) {
+            document.getElementById('processModal').style.display = 'flex';
+            
+            // Reset UI states
+            document.getElementById('loaderSpinner').style.display = 'block';
+            document.getElementById('iconSuccess').style.display = 'none';
+            document.getElementById('iconFail').style.display = 'none';
+            document.getElementById('processTitle').innerText = "Verifying Payment...";
+            document.getElementById('processDesc').innerText = "Please wait while we confirm your transaction. Do not close this page.";
+            document.getElementById('supportBtn').style.display = 'none';
+            document.getElementById('closeProcessBtn').style.display = 'none';
+            document.getElementById('processTimer').style.display = 'block';
+
+            // Start 1 minute timer
+            let timeLeft = 60;
+            document.getElementById('processTimer').innerText = "01:00";
+            
+            processInterval = setInterval(() => {
+                timeLeft--;
+                const m = Math.floor(timeLeft / 60).toString().padStart(2,'0');
+                const s = (timeLeft % 60).toString().padStart(2,'0');
+                document.getElementById('processTimer').innerText = `${m}:${s}`;
+
+                if(timeLeft <= 0) {
+                    clearInterval(processInterval);
+                    handleProcessTimeout();
+                }
+            }, 1000);
+
+            // Listen for status changes
+            db.ref('requests/' + reqKey).on('value', (snap) => {
+                const data = snap.val();
+                if(data && data.status === 'approve') {
+                    clearInterval(processInterval);
+                    showProcessSuccess();
+                } else if(data && data.status === 'reject') {
+                    clearInterval(processInterval);
+                    showProcessFail();
+                }
+            });
+        }
+
+        function handleProcessTimeout() {
+            document.getElementById('loaderSpinner').style.display = 'none';
+            document.getElementById('processTimer').style.display = 'none';
+            document.getElementById('processTitle').innerText = "Verification Delayed";
+            document.getElementById('processDesc').innerText = "It seems verification is taking longer than usual. Please contact support.";
+            document.getElementById('supportBtn').style.display = 'inline-flex';
+            document.getElementById('closeProcessBtn').style.display = 'block';
+        }
+
+        function showProcessSuccess() {
+            document.getElementById('loaderSpinner').style.display = 'none';
+            document.getElementById('processTimer').style.display = 'none';
+            document.getElementById('iconSuccess').style.display = 'block';
+            document.getElementById('processTitle').innerText = "Payment Verified!";
+            document.getElementById('processDesc').innerText = "Funds added to your balance.";
+            
+            setTimeout(() => {
+                closeProcessModal();
+                switchView('home');
+            }, 2000);
+        }
+
+        function showProcessFail() {
+            document.getElementById('loaderSpinner').style.display = 'none';
+            document.getElementById('processTimer').style.display = 'none';
+            document.getElementById('iconFail').style.display = 'block';
+            document.getElementById('processTitle').innerText = "Verification Failed";
+            document.getElementById('processDesc').innerText = "Transaction ID mismatch or invalid.";
+            document.getElementById('supportBtn').style.display = 'inline-flex';
+            document.getElementById('closeProcessBtn').style.display = 'block';
+        }
+
+        function closeProcessModal() {
+            document.getElementById('processModal').style.display = 'none';
+            if(processInterval) clearInterval(processInterval);
+        }
+
+        // --- ADMIN SETTINGS LOGIC (MODIFIED FOR MULTIPLE BANKS & LIMITS) ---
+
+        function createAdminPlan() {
+            const name = document.getElementById('adminPlanName').value;
+            const price = parseFloat(document.getElementById('adminPlanPrice').value);
+            const roi = parseFloat(document.getElementById('adminPlanRoi').value);
+            const limit = parseInt(document.getElementById('adminPlanLimit').value) || 1; // Default 1
+            const img = document.getElementById('adminPlanImg').value;
+
+            if(!name || !price || !roi) return showToast("Fill all plan details");
+
+            db.ref('plans').push({
+                name: name,
+                price: price,
+                roi: roi,
+                limit: limit, // SAVE LIMIT
+                img: img || "https://images.unsplash.com/photo-1511499767150-a48a237f0083"
+            }).then(() => {
+                showToast("Plan Created Successfully!");
+                document.getElementById('adminPlanName').value = "";
+                document.getElementById('adminPlanPrice').value = "";
+                document.getElementById('adminPlanRoi').value = "";
+                document.getElementById('adminPlanLimit').value = "";
+                document.getElementById('adminPlanImg').value = "";
+            });
+        }
+
+        // --- NEW: LOAD PLANS FOR ADMIN EDITING ---
+        function loadAdminPlans() {
+            db.ref('plans').on('value', (snap) => {
+                const container = document.getElementById('adminExistingPlansList');
+                container.innerHTML = "";
+                
+                if(!snap.exists()) {
+                    container.innerHTML = "<small>No plans found.</small>";
+                    return;
+                }
+
+                snap.forEach(child => {
+                    const plan = child.val();
+                    const key = child.key;
+                    
+                    const html = `
+                    <div class="admin-plan-row animate-up">
+                        <div class="admin-plan-info">
+                            <strong>${plan.name}</strong> <br>
+                            Price: ${plan.price} | Daily: ${plan.roi}
+                        </div>
+                        <div class="admin-plan-actions">
+                            <button onclick="openEditPlanModal('${key}', '${plan.name}', ${plan.price}, ${plan.roi}, ${plan.limit || 1}, '${plan.img}')" style="background:var(--primary-color); color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:0.75rem;">Edit</button>
+                            <button onclick="deletePlan('${key}')" style="background:#ef4444; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:0.75rem;">Delete</button>
+                        </div>
+                    </div>`;
+                    container.insertAdjacentHTML('beforeend', html);
+                });
+            });
+        }
+
+        // --- NEW: EDIT PLAN MODAL LOGIC ---
+        let currentEditKey = null;
+
+        function openEditPlanModal(key, name, price, roi, limit, img) {
+            currentEditKey = key;
+            document.getElementById('editPlanName').value = name;
+            document.getElementById('editPlanPrice').value = price;
+            document.getElementById('editPlanRoi').value = roi;
+            document.getElementById('editPlanLimit').value = limit;
+            document.getElementById('editPlanImg').value = img;
+            
+            openModal('editPlanModal');
+        }
+
+        function submitEditPlan() {
+            if(!currentEditKey) return;
+            
+            const name = document.getElementById('editPlanName').value;
+            const price = parseFloat(document.getElementById('editPlanPrice').value);
+            const roi = parseFloat(document.getElementById('editPlanRoi').value);
+            const limit = parseInt(document.getElementById('editPlanLimit').value);
+            const img = document.getElementById('editPlanImg').value;
+
+            db.ref('plans/' + currentEditKey).update({
+                name: name,
+                price: price,
+                roi: roi,
+                limit: limit,
+                img: img
+            }).then(() => {
+                showToast("Plan Updated!");
+                closeModal('editPlanModal');
+            });
+        }
+
+        function deletePlan(key) {
+            if(confirm("Are you sure you want to delete this plan? Users who already bought it will keep it, but new users won't see it.")) {
+                db.ref('plans/' + key).remove().then(() => {
+                    showToast("Plan Deleted.");
+                });
+            }
+        }
+
+
+        // UPDATED: ADD NEW PAYMENT METHOD (Push to list)
+        function addNewPaymentMethod() {
+            const bank = document.getElementById('adminBankName').value;
+            const accName = document.getElementById('adminAccountName').value;
+            const accNum = document.getElementById('adminAccountNum').value;
+
+            if(!bank || !accNum) return showToast("Enter Bank & Account Number");
+
+            db.ref('settings/paymentMethods').push({
+                bankName: bank,
+                accountName: accName,
+                accountNumber: accNum
+            }).then(() => {
+                showToast("Payment Method Added!");
+                document.getElementById('adminBankName').value = "";
+                document.getElementById('adminAccountName').value = "";
+                document.getElementById('adminAccountNum').value = "";
+            });
+        }
+
+        // UPDATED: LOAD LIST FOR ADMIN
+        function loadAdminBankList() {
+            db.ref('settings/paymentMethods').on('value', (snap) => {
+                const container = document.getElementById('adminExistingBanks');
+                container.innerHTML = "";
+                
+                if(!snap.exists()) {
+                    container.innerHTML = "<small>No active methods.</small>";
+                    return;
+                }
+
+                snap.forEach(child => {
+                    const bank = child.val();
+                    const key = child.key;
+                    const html = `
+                    <div style="background:#f8fafc; padding:10px; border:1px solid #eee; margin-bottom:5px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+                        <div style="font-size:0.8rem;">
+                            <strong>${bank.bankName}</strong><br>
+                            ${bank.accountNumber} (${bank.accountName})
+                        </div>
+                        <button onclick="deletePaymentMethod('${key}')" style="background:#ef4444; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:0.75rem;">Delete</button>
+                    </div>`;
+                    container.insertAdjacentHTML('beforeend', html);
+                });
+            });
+        }
+
+        function deletePaymentMethod(key) {
+            if(confirm("Delete this payment method?")) {
+                db.ref('settings/paymentMethods/' + key).remove();
+            }
+        }
+
+        // --- INVESTMENT LOGIC (UPDATED WITH COMMISSION & LIMIT CHECK) ---
+        function buyPlan(planId, cost, dailyRate, limit) {
+            // Count existing purchases of this planId
+            let currentCount = 0;
+            if(userData.plans) {
+                for(let key in userData.plans) {
+                    // Check if key matches (old way) OR if 'planId' prop matches (new way)
+                    if(key === planId || userData.plans[key].planId === planId) {
+                        currentCount++;
+                    }
+                }
+            }
+
+            if(currentCount >= limit) {
+                return showToast("Purchase Limit Reached for this Plan!");
+            }
+
+            if(userData.balance < cost) return showToast("Insufficient Balance");
+            
+            // Check if this is the FIRST time investment (Total plans check)
+            const isFirstInvestment = (!userData.plans || Object.keys(userData.plans).length === 0);
+
+            const newBal = userData.balance - cost;
+            const newPlans = userData.plans || {};
+            
+            // NEW KEY GENERATION: planId_TIMESTAMP to allow multiple buys
+            const uniqueKey = planId + '_' + Date.now();
+            
+            newPlans[uniqueKey] = { 
+                active: true, 
+                planId: planId, // STORE ORIGINAL ID
+                daily: dailyRate, 
+                lastPaid: Date.now(),
+                lastClaimDate: new Date().toDateString() // ADDED: Set to today so they can't claim immediately
+            };
+            
+            db.ref('users/' + currentUser).update({ balance: newBal, plans: newPlans }).then(() => {
+                showToast("Investment Successful!");
+                
+                // Trigger Referral Commission only on FIRST investment
+                if(isFirstInvestment && userData.referredBy && userData.referredBy !== 'admin') {
+                    distributeCommissions(userData.referredBy, cost);
+                }
+
+                updateUI(); 
+                loadShopPlans(); // Will update counters
+                loadTeamTasks(); 
+            });
+        }
+
+        function distributeCommissions(referrerCode, amount) {
+            // Level 1: 12% 
+            db.ref('users').orderByChild('refCode').equalTo(referrerCode).once('value', (snap) => {
+                if(snap.exists()) {
+                    const u1Key = Object.keys(snap.val())[0];
+                    const u1Data = snap.val()[u1Key];
+                    const comm1 = amount * 0.12;
+                    
+                    // Update Level 1 User
+                    db.ref('users/' + u1Key).update({
+                        balance: (u1Data.balance || 0) + comm1,
+                        commission: (u1Data.commission || 0) + comm1
+                    });
+
+                    // Level 2: 2% (Check if Level 1 has a referrer)
+                    if(u1Data.referredBy && u1Data.referredBy !== 'admin') {
+                        db.ref('users').orderByChild('refCode').equalTo(u1Data.referredBy).once('value', (snap2) => {
+                            if(snap2.exists()) {
+                                const u2Key = Object.keys(snap2.val())[0];
+                                const u2Data = snap2.val()[u2Key];
+                                const comm2 = amount * 0.02;
+                                
+                                // Update Level 2 User
+                                db.ref('users/' + u2Key).update({
+                                    balance: (u2Data.balance || 0) + comm2,
+                                    commission: (u2Data.commission || 0) + comm2
+                                });
+
+                                // Level 3: 1% (Check if Level 2 has a referrer)
+                                if(u2Data.referredBy && u2Data.referredBy !== 'admin') {
+                                    db.ref('users').orderByChild('refCode').equalTo(u2Data.referredBy).once('value', (snap3) => {
+                                        if(snap3.exists()) {
+                                            const u3Key = Object.keys(snap3.val())[0];
+                                            const u3Data = snap3.val()[u3Key];
+                                            const comm3 = amount * 0.01;
+                                            
+                                            // Update Level 3 User
+                                            db.ref('users/' + u3Key).update({
+                                                balance: (u3Data.balance || 0) + comm3,
+                                                commission: (u3Data.commission || 0) + comm3
+                                            });
+                                        }
+                                    });
+                                }
+                            }
+                        });
+                    }
+                }
+            });
+        }
+
+        // --- BANK CARD & WITHDRAWAL LOGIC ---
+
+        function saveBankInfo() {
+            const bankName = document.getElementById('bindBankName').value;
+            const accName = document.getElementById('bindAccName').value;
+            const accNum = document.getElementById('bindAccNum').value;
+            const wPass = document.getElementById('bindWithPass').value;
+
+            if(!bankName || !accName || !accNum || !wPass) {
+                return showToast("Please fill all fields");
+            }
+
+            db.ref('users/' + currentUser + '/bankInfo').set({
+                bankName: bankName,
+                accName: accName,
+                accNum: accNum,
+                withdrawPass: wPass
+            }).then(() => {
+                showToast("Bank Info Saved!");
+                switchView('profile');
+            });
+        }
+
+        function submitWithdraw() {
+            if(!userData.bankInfo || !userData.bankInfo.withdrawPass) {
+                document.getElementById('withdrawInputs').style.display = 'none';
+                document.getElementById('withdrawMsg').style.display = 'block';
+                return;
+            }
+
+            const amount = parseFloat(document.getElementById('withAmount').value);
+            const passAttempt = document.getElementById('withAuthPass').value;
+            
+            if(!amount || !passAttempt) return showToast("Enter Amount and Password");
+            
+            // NEW: Min Withdraw 150
+            if(amount < 150) return showToast("Minimum Withdrawal is ETB 150");
+
+            // --- RESTRICTION: MUST INVEST FIRST ---
+            if(!userData.plans || Object.keys(userData.plans).length === 0) {
+                return showToast("You must invest in a product first to withdraw!");
+            }
+
+            if(passAttempt !== userData.bankInfo.withdrawPass) {
+                return showToast("Incorrect Withdrawal Password!");
+            }
+
+            if(amount > userData.balance) return showToast("Insufficient Balance");
+            
+            const addrStr = `${userData.bankInfo.bankName} - ${userData.bankInfo.accNum} (${userData.bankInfo.accName})`;
+            
+            const newBal = userData.balance - amount;
+            db.ref('users/' + currentUser).update({ balance: newBal }).then(() => {
+                const reqData = { type: 'withdraw', amount: amount, user: currentUser, phone: userData.phone || currentUser, address: addrStr, status: 'pending', timestamp: Date.now() };
+                db.ref('requests').push(reqData);
+                
+                document.getElementById('withAmount').value = "";
+                document.getElementById('withAuthPass').value = "";
+                
+                showToast("Withdrawal request sent!");
+                switchView('home');
+            });
+        }
+
+        function listenForRequests() {
+            db.ref('requests').on('value', (snapshot) => {
+                const list = document.getElementById('adminRequestList');
+                list.innerHTML = ""; 
+                if(!snapshot.exists()) {
+                    list.innerHTML = "<p style='text-align:center; padding:20px; color:#aaa;'>No pending requests</p>";
+                    return;
+                }
+                snapshot.forEach((childSnap) => {
+                    const req = childSnap.val();
+                    const key = childSnap.key;
+                    if(req.status === 'pending') {
+                        const isDep = req.type === 'deposit';
+                        const badgeClass = isDep ? 'bg-dep' : 'bg-with';
+                        const typeLabel = isDep ? 'Deposit' : 'Withdraw';
+                        let detailText = "";
+                        
+                        if(isDep) {
+                            detailText = `<div>Ref: ${req.txnId}</div><div>Sender: <b>${req.senderName || 'N/A'}</b></div>`;
+                        } else {
+                            detailText = `<div>Info: ${req.address}</div>`;
+                        }
+
+                        const html = `
+                            <div class="admin-req-card">
+                                <div class="req-header"><span class="badge ${badgeClass}">${typeLabel}</span><span>ETB ${req.amount}</span></div>
+                                <div class="req-detail">User: ${req.phone}</div>
+                                <div class="req-detail">${detailText}</div>
+                                <div class="req-actions">
+                                    <button class="btn-approve" onclick="processRequest('${key}', 'approve', '${req.user}', ${req.amount}, '${req.type}')"><i class="fa-solid fa-check"></i> Accept</button>
+                                    <button class="btn-reject" onclick="processRequest('${key}', 'reject', '${req.user}', ${req.amount}, '${req.type}')"><i class="fa-solid fa-xmark"></i> Reject</button>
+                                </div>
+                            </div>`;
+                        list.insertAdjacentHTML('beforeend', html);
+                    }
+                });
+            });
+        }
+
+        function processRequest(reqKey, action, userId, amount, type) {
+            if(!confirm(`Are you sure you want to ${action}?`)) return;
+            db.ref('requests/' + reqKey).update({ status: action }).then(() => {
+                if (action === 'approve' && type === 'deposit') {
+                    db.ref('users/' + userId).once('value', snap => {
+                        const currentBal = parseFloat(snap.val().balance || 0);
+                        db.ref('users/' + userId).update({ balance: currentBal + parseFloat(amount) });
+                    });
+                    showToast("Deposit Approved");
+                } else if (action === 'reject' && type === 'withdraw') {
+                    db.ref('users/' + userId).once('value', snap => {
+                        const currentBal = parseFloat(snap.val().balance || 0);
+                        db.ref('users/' + userId).update({ balance: currentBal + parseFloat(amount) });
+                    });
+                    showToast("Withdrawal Refunded");
+                } else {
+                    showToast(`Request ${action}ed`);
+                }
+            });
+        }
+
+        // --- HISTORY LOGIC ---
+        let allTxns = [];
+
+        function loadFullHistoryPage(filter, btnElement) {
+            const list = document.getElementById('fullHistoryList');
+            list.innerHTML = "<p style='text-align:center; padding:20px; color:#999;'>Loading transactions...</p>";
+            
+            db.ref('requests').orderByChild('user').equalTo(currentUser).once('value', (snap) => {
+                if(!snap.exists()) {
+                    list.innerHTML = "<p style='text-align:center; padding:30px; color:#777; font-size:1.1rem;'>No Transaction History Found.</p>";
+                    return;
+                }
+                
+                allTxns = [];
+                snap.forEach(c => allTxns.push(c.val()));
+                allTxns.reverse(); 
+                
+                renderFullHistory(filter);
+            });
+        }
+
+        function filterHistoryPage(filter, btn) {
+            if(btn) {
+                document.querySelectorAll('.h-tab').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            }
+            renderFullHistory(filter);
+        }
+
+        function renderFullHistory(filter) {
+            const list = document.getElementById('fullHistoryList');
+            list.innerHTML = "";
+            
+            let filtered = allTxns;
+            if(filter !== 'all') {
+                filtered = allTxns.filter(t => t.type === filter);
+            }
+
+            if(filtered.length === 0) {
+                 list.innerHTML = "<p style='text-align:center; padding:30px; color:#777; font-size:1.1rem;'>No transactions in this category.</p>";
+                 return;
+            }
+
+            filtered.forEach(t => {
+                const isDep = t.type === 'deposit';
+                let badgeClass = 'badge-pending';
+                if (t.status === 'approve') badgeClass = 'badge-success';
+                if (t.status === 'reject') badgeClass = 'badge-danger';
+                
+                const label = isDep ? 'Deposit' : 'Withdraw';
+                const iconClass = isDep ? 'dep' : 'with';
+                const icon = isDep ? '<i class="fa-solid fa-arrow-down"></i>' : '<i class="fa-solid fa-arrow-up"></i>';
+                const date = new Date(t.timestamp).toLocaleDateString() + ' ' + new Date(t.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                
+                const html = `
+                <div class="history-item-full animate-up">
+                    <div style="display:flex; align-items:center;">
+                        <div class="h-icon ${iconClass}">
+                            ${icon}
+                        </div>
+                        <div>
+                            <div style="font-weight:700; font-size:1rem; color:var(--text-dark);">${label}</div>
+                            <div style="font-size:0.8rem; color:#888; margin-top:2px;">${date}</div>
+                        </div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-weight:700; font-size:1.1rem; color:var(--text-dark); margin-bottom:4px;">ETB ${t.amount}</div>
+                        <span class="${badgeClass}" style="text-transform:capitalize;">${t.status}</span>
+                    </div>
+                </div>`;
+                list.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        // --- INCOME HISTORY LOGIC (UPDATED WITH NEW DESIGN & NEW PLAN KEYS) ---
+        function loadIncomePage() {
+            const list = document.getElementById('incomePageList');
+            list.innerHTML = "";
+
+            if(!userData.plans) {
+                list.innerHTML = "<div style='background:white; padding:20px; border-radius:15px; text-align:center; color:#666;'>No active investments.</div>";
+                return;
+            }
+            
+            db.ref('plans').once('value', (snap) => {
+                const allPlans = snap.val() || {};
+                let html = "";
+                
+                for(let key in userData.plans) {
+                    const uPlan = userData.plans[key];
+                    const realPid = uPlan.planId || key;
+                    const pDetail = allPlans[realPid] || {name: "Plan", price: 0};
+                    
+                    if(uPlan.active) {
+                        html += `
+                        <div class="history-card animate-up" style="background:white; margin-bottom:15px; padding:15px; border-radius:15px; box-shadow:0 4px 10px rgba(0,0,0,0.05);">
+                            <div style="display:flex; gap:15px; align-items:center;">
+                                <div style="background:#e0f2fe; width:50px; height:50px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#0284c7; font-size:1.2rem;">
+                                    <i class="fa-solid fa-briefcase"></i>
+                                </div>
+                                <div>
+                                    <div style="font-weight:bold; font-size:1rem; color:#333;">${pDetail.name || "Investment"}</div>
+                                    <div style="font-size:0.85rem; color:#666; margin-top:3px;">Daily: ETB ${uPlan.daily}</div>
+                                </div>
+                            </div>
+                            <div style="text-align:right;">
+                                <span class="badge-success" style="font-size:0.8rem; padding:5px 10px;">Active</span>
+                            </div>
+                        </div>`;
+                    }
+                }
+                list.innerHTML = html;
+            });
+        }
+
+        function copyRefLink() {
+            const code = document.getElementById('invitePageCode').innerText; 
+            const link = window.location.origin + window.location.pathname + "?ref=" + code;
+            navigator.clipboard.writeText(link);
+            showToast("Invite Link Copied!");
+        }
+        function copyText(id) { navigator.clipboard.writeText(document.getElementById(id).innerText); showToast("Copied!"); }
+        function copyString(str) { navigator.clipboard.writeText(str); showToast("Copied!"); }
+        function openModal(id) { document.getElementById(id).style.display = 'block'; }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        function showToast(text) {
+            const t = document.getElementById("toast"); t.className = "show"; t.innerText = text;
+            setTimeout(() => { t.className = t.className.replace("show", ""); }, 3000);
+        }
+
+        const images = [
+            "https://images.unsplash.com/photo-1572635196237-14b3f281503f?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1591076482161-42ce6da69f67?auto=format&fit=crop&w=800&q=80"
+        ];
+        let i = 0;
+        setInterval(() => {
+            i = (i + 1) % images.length;
+            document.getElementById('slideImg').src = images[i];
+        }, 4000);
+    </script>
+</body>
+</html>
