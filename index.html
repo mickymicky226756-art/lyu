@@ -568,11 +568,11 @@
                 </h4>
                 <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;">
                     <span>Level 1 (Direct)</span>
-                    <span style="font-weight:bold; color:#fff; background:#f59e0b; padding:2px 8px; border-radius:4px;">11%</span>
+                    <span style="font-weight:bold; color:#fff; background:#f59e0b; padding:2px 8px; border-radius:4px;">10%</span>
                 </div>
                 <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;">
                     <span>Level 2 (Team)</span>
-                    <span style="font-weight:bold; color:#fff; background:#f59e0b; padding:2px 8px; border-radius:4px;">3%</span>
+                    <span style="font-weight:bold; color:#fff; background:#f59e0b; padding:2px 8px; border-radius:4px;">1%</span>
                 </div>
                 <div style="display:flex; justify-content:space-between; font-size:0.9rem;">
                     <span>Level 3 (Team)</span>
@@ -1672,34 +1672,35 @@
                 document.getElementById('profTotWith').innerText = totWith.toFixed(2);
             });
 
-            // 3. Team Calculations (ROBUST VERSION FOR CASE-INSENSITIVITY)
+            // 3. Team Calculations - FIXED & ROBUST
+            if (!userData || !userData.refCode) return;
+
             db.ref('users').once('value', (snap) => {
                 if(!snap.exists()) {
-                    // Reset stats if no users
-                    document.getElementById('lvl1Cnt').innerText = "0";
-                    document.getElementById('lvl2Cnt').innerText = "0";
-                    document.getElementById('lvl3Cnt').innerText = "0";
-                    document.getElementById('teamTotalCnt').innerText = "0";
-                    document.getElementById('teamInvestCnt').innerText = "0";
+                    if(document.getElementById('lvl1Cnt')) document.getElementById('lvl1Cnt').innerText = "0";
+                    if(document.getElementById('lvl2Cnt')) document.getElementById('lvl2Cnt').innerText = "0";
+                    if(document.getElementById('lvl3Cnt')) document.getElementById('lvl3Cnt').innerText = "0";
+                    if(document.getElementById('teamTotalCnt')) document.getElementById('teamTotalCnt').innerText = "0";
+                    if(document.getElementById('teamInvestCnt')) document.getElementById('teamInvestCnt').innerText = "0";
                     return;
                 }
                 
-                const allUsers = [];
-                snap.forEach(c => allUsers.push(c.val()));
+                const allUsersVal = snap.val();
+                const allUsersArray = Object.values(allUsersVal); 
                 
-                // Helper to normalize strings (handle upper/lowercase mismatch)
-                const myCode = (userData.refCode || "").trim().toUpperCase();
+                // Helper to normalize strings (handle upper/lowercase mismatch and nulls)
+                const myCode = String(userData.refCode || "").trim().toUpperCase();
 
                 // Lvl 1: Referred by ME
-                const lvl1 = allUsers.filter(u => (u.referredBy || "").trim().toUpperCase() === myCode);
+                const lvl1 = allUsersArray.filter(u => String(u.referredBy || "").trim().toUpperCase() === myCode);
                 
                 // Lvl 2: Referred by Lvl 1 Users
-                const lvl1Codes = lvl1.map(u => (u.refCode || "").trim().toUpperCase());
-                const lvl2 = allUsers.filter(u => lvl1Codes.includes((u.referredBy || "").trim().toUpperCase()));
+                const lvl1Codes = lvl1.map(u => String(u.refCode || "").trim().toUpperCase());
+                const lvl2 = allUsersArray.filter(u => lvl1Codes.includes(String(u.referredBy || "").trim().toUpperCase()));
                 
                 // Lvl 3: Referred by Lvl 2 Users
-                const lvl2Codes = lvl2.map(u => (u.refCode || "").trim().toUpperCase());
-                const lvl3 = allUsers.filter(u => lvl2Codes.includes((u.referredBy || "").trim().toUpperCase()));
+                const lvl2Codes = lvl2.map(u => String(u.refCode || "").trim().toUpperCase());
+                const lvl3 = allUsersArray.filter(u => lvl2Codes.includes(String(u.referredBy || "").trim().toUpperCase()));
                 
                 const totalTeam = lvl1.length + lvl2.length + lvl3.length;
                 
@@ -1710,15 +1711,20 @@
                 wholeTeam.forEach(u => {
                    // Check if plans object exists and has at least one key
                    if(u.plans && Object.keys(u.plans).length > 0) {
-                       investors++;
+                       // Optional: Check if at least one plan is active
+                       let hasActive = false;
+                       for(let k in u.plans) {
+                           if(u.plans[k].active) hasActive = true;
+                       }
+                       if(hasActive) investors++;
                    }
                 });
 
-                document.getElementById('lvl1Cnt').innerText = lvl1.length;
-                document.getElementById('lvl2Cnt').innerText = lvl2.length;
-                document.getElementById('lvl3Cnt').innerText = lvl3.length;
-                document.getElementById('teamTotalCnt').innerText = totalTeam;
-                document.getElementById('teamInvestCnt').innerText = investors;
+                if(document.getElementById('lvl1Cnt')) document.getElementById('lvl1Cnt').innerText = lvl1.length;
+                if(document.getElementById('lvl2Cnt')) document.getElementById('lvl2Cnt').innerText = lvl2.length;
+                if(document.getElementById('lvl3Cnt')) document.getElementById('lvl3Cnt').innerText = lvl3.length;
+                if(document.getElementById('teamTotalCnt')) document.getElementById('teamTotalCnt').innerText = totalTeam;
+                if(document.getElementById('teamInvestCnt')) document.getElementById('teamInvestCnt').innerText = investors;
             });
         }
 
