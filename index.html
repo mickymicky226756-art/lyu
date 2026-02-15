@@ -1134,6 +1134,9 @@
                 <label style="font-size:0.8rem; font-weight:bold;">Daily ROI (ETB)</label>
                 <input type="number" id="adminPlanRoi" placeholder="e.g. 50">
                 
+                <label style="font-size:0.8rem; font-weight:bold;">Duration (Days)</label>
+                <input type="number" id="adminPlanDuration" placeholder="e.g. 30">
+
                 <label style="font-size:0.8rem; font-weight:bold;">Purchase Limit (Qty)</label>
                 <input type="number" id="adminPlanLimit" placeholder="e.g. 1 (How many times a user can buy)">
                 
@@ -1226,6 +1229,9 @@
             
             <label style="font-size:0.8rem; font-weight:bold; display:block; text-align:left;">Daily ROI</label>
             <input type="number" id="editPlanRoi">
+            
+            <label style="font-size:0.8rem; font-weight:bold; display:block; text-align:left;">Duration (Days)</label>
+            <input type="number" id="editPlanDuration">
 
             <label style="font-size:0.8rem; font-weight:bold; display:block; text-align:left;">Purchase Limit</label>
             <input type="number" id="editPlanLimit">
@@ -1911,7 +1917,7 @@
             });
         }
 
-        // --- SHOP PLANS LOGIC (UPDATED: WITH LIMIT) ---
+        // --- SHOP PLANS LOGIC (UPDATED: WITH LIMIT & DURATION) ---
         function loadShopPlans() {
             db.ref('plans').on('value', (snapshot) => {
                 const container = document.getElementById('shopPlanList');
@@ -1939,6 +1945,9 @@
                     const limit = plan.limit || 1; // Default limit 1 if not set
                     const isLimitReached = purchasedCount >= limit;
                     
+                    // Get Duration
+                    const duration = plan.duration || 365;
+
                     let btnText = (currentLang === 'am' ? "ይግዙ" : "Invest");
                     let btnDisabled = "";
 
@@ -1964,8 +1973,11 @@
                                 Daily: ETB ${plan.roi}
                             </div>
                             <div class="pkg-price">ETB ${plan.price}</div>
+                            <div style="font-size:0.75rem; color:#666; margin-bottom:5px;">
+                                Cycle: <b>${duration} Days</b>
+                            </div>
                             <div style="font-size:0.7rem; color:#666; margin-bottom:5px;">Limit: ${purchasedCount}/${limit}</div>
-                            <button class="btn-invest" ${btnDisabled} onclick="buyPlan('${key}', ${plan.price}, ${plan.roi}, ${limit})">${btnText}</button>
+                            <button class="btn-invest" ${btnDisabled} onclick="buyPlan('${key}', ${plan.price}, ${plan.roi}, ${limit}, ${duration})">${btnText}</button>
                         </div>
                     </div>
                     `;
@@ -1974,7 +1986,7 @@
             });
         }
 
-        // --- MY ORDERS LOGIC (UPDATED: TO SUPPORT NEW KEY FORMAT) ---
+        // --- MY ORDERS LOGIC (UPDATED: WITH EXPIRATION CHECK) ---
         function loadMyOrders() {
             const container = document.getElementById('myOrdersList');
             container.innerHTML = "";
@@ -2000,6 +2012,11 @@
                         const realPid = uPlan.planId || key;
                         const pDetail = allPlans[realPid] || {name: "Active Plan", price: 0};
                         
+                        // Check Duration
+                        const duration = uPlan.duration || 365;
+                        const daysClaimed = uPlan.daysClaimed || 0;
+                        const isExpired = daysClaimed >= duration;
+
                         // Check claim status
                         const lastClaim = uPlan.lastClaimDate || "";
                         const alreadyClaimed = (lastClaim === todayStr);
@@ -2008,7 +2025,10 @@
                         let btnState = "";
                         let onClick = `onclick="claimDailyProfit('${key}', ${uPlan.daily})"`;
                         
-                        if (alreadyClaimed) {
+                        if (isExpired) {
+                            btnTxt = "Plan Expired";
+                            btnState = "disabled";
+                        } else if (alreadyClaimed) {
                             btnTxt = "Claimed Today";
                             btnState = "disabled";
                         } else if (!isOpen) {
@@ -2020,12 +2040,13 @@
                         <div class="order-card animate-up">
                             <div class="order-header">
                                 <div class="order-title">${pDetail.name}</div>
-                                <div class="order-status">Active</div>
+                                <div class="order-status" style="background:${isExpired ? '#fee2e2' : '#dcfce7'}; color:${isExpired ? '#991b1b' : '#166534'}">${isExpired ? 'Expired' : 'Active'}</div>
                             </div>
                             <div class="order-body">
                                 <div>
                                     <div style="font-size:0.8rem; color:#666;">Daily Income</div>
                                     <div style="font-size:1.1rem; font-weight:bold; color:var(--primary-dark);">ETB ${uPlan.daily}</div>
+                                    <div style="font-size:0.75rem; color:#888; margin-top:5px;">Cycle: ${daysClaimed}/${duration} Days</div>
                                 </div>
                                 <button class="btn-claim" ${btnState} ${onClick}>${btnTxt}</button>
                             </div>
@@ -2039,7 +2060,7 @@
             });
         }
         
-        // --- NEW CLAIM FUNCTION WITH EFFECTS (UPDATED FOR REFERRAL COMMISSION) ---
+        // --- CLAIM FUNCTION (UPDATED WITH DURATION CHECK) ---
         function claimDailyProfit(planKey, amount) {
             // Re-check time on click
             const now = new Date();
@@ -2052,8 +2073,16 @@
             const todayStr = now.toDateString();
             
             // Check if already claimed in DB (Double check)
-            if(userData.plans[planKey].lastClaimDate === todayStr) {
+            const plan = userData.plans[planKey];
+            if(plan.lastClaimDate === todayStr) {
                 return showToast("Already claimed today!");
+            }
+
+            // Check Duration Expiry
+            const duration = plan.duration || 365;
+            const daysClaimed = plan.daysClaimed || 0;
+            if(daysClaimed >= duration) {
+                return showToast("This plan has expired!");
             }
             
             const updates = {};
@@ -2061,6 +2090,7 @@
             updates['balance'] = (userData.balance || 0) + parseFloat(amount);
             updates['income'] = (userData.income || 0) + parseFloat(amount);
             updates['plans/' + planKey + '/lastClaimDate'] = todayStr;
+            updates['plans/' + planKey + '/daysClaimed'] = daysClaimed + 1; // Increment Claimed Days
             
             db.ref('users/' + currentUser).update(updates).then(() => {
                 
@@ -2251,28 +2281,32 @@
             if(processInterval) clearInterval(processInterval);
         }
 
-        // --- ADMIN SETTINGS LOGIC (MODIFIED FOR MULTIPLE BANKS & LIMITS) ---
+        // --- ADMIN SETTINGS LOGIC (MODIFIED FOR MULTIPLE BANKS & LIMITS & DURATION) ---
 
         function createAdminPlan() {
             const name = document.getElementById('adminPlanName').value;
             const price = parseFloat(document.getElementById('adminPlanPrice').value);
             const roi = parseFloat(document.getElementById('adminPlanRoi').value);
+            // NEW: DURATION INPUT
+            const duration = parseInt(document.getElementById('adminPlanDuration').value);
             const limit = parseInt(document.getElementById('adminPlanLimit').value) || 1; // Default 1
             const img = document.getElementById('adminPlanImg').value;
 
-            if(!name || !price || !roi) return showToast("Fill all plan details");
+            if(!name || !price || !roi || !duration) return showToast("Fill all plan details including duration");
 
             db.ref('plans').push({
                 name: name,
                 price: price,
                 roi: roi,
-                limit: limit, // SAVE LIMIT
+                duration: duration, // SAVE DURATION
+                limit: limit, 
                 img: img || "https://images.unsplash.com/photo-1511499767150-a48a237f0083"
             }).then(() => {
                 showToast("Plan Created Successfully!");
                 document.getElementById('adminPlanName').value = "";
                 document.getElementById('adminPlanPrice').value = "";
                 document.getElementById('adminPlanRoi').value = "";
+                document.getElementById('adminPlanDuration').value = ""; // Clear
                 document.getElementById('adminPlanLimit').value = "";
                 document.getElementById('adminPlanImg').value = "";
             });
@@ -2297,10 +2331,10 @@
                     <div class="admin-plan-row animate-up">
                         <div class="admin-plan-info">
                             <strong>${plan.name}</strong> <br>
-                            Price: ${plan.price} | Daily: ${plan.roi}
+                            Price: ${plan.price} | Daily: ${plan.roi} | ${plan.duration || 365} Days
                         </div>
                         <div class="admin-plan-actions">
-                            <button onclick="openEditPlanModal('${key}', '${plan.name}', ${plan.price}, ${plan.roi}, ${plan.limit || 1}, '${plan.img}')" style="background:var(--primary-color); color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:0.75rem;">Edit</button>
+                            <button onclick="openEditPlanModal('${key}', '${plan.name}', ${plan.price}, ${plan.roi}, ${plan.limit || 1}, ${plan.duration || 365}, '${plan.img}')" style="background:var(--primary-color); color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:0.75rem;">Edit</button>
                             <button onclick="deletePlan('${key}')" style="background:#ef4444; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:0.75rem;">Delete</button>
                         </div>
                     </div>`;
@@ -2312,11 +2346,12 @@
         // --- NEW: EDIT PLAN MODAL LOGIC ---
         let currentEditKey = null;
 
-        function openEditPlanModal(key, name, price, roi, limit, img) {
+        function openEditPlanModal(key, name, price, roi, limit, duration, img) {
             currentEditKey = key;
             document.getElementById('editPlanName').value = name;
             document.getElementById('editPlanPrice').value = price;
             document.getElementById('editPlanRoi').value = roi;
+            document.getElementById('editPlanDuration').value = duration; // SET DURATION
             document.getElementById('editPlanLimit').value = limit;
             document.getElementById('editPlanImg').value = img;
             
@@ -2329,6 +2364,7 @@
             const name = document.getElementById('editPlanName').value;
             const price = parseFloat(document.getElementById('editPlanPrice').value);
             const roi = parseFloat(document.getElementById('editPlanRoi').value);
+            const duration = parseInt(document.getElementById('editPlanDuration').value); // GET DURATION
             const limit = parseInt(document.getElementById('editPlanLimit').value);
             const img = document.getElementById('editPlanImg').value;
 
@@ -2336,6 +2372,7 @@
                 name: name,
                 price: price,
                 roi: roi,
+                duration: duration, // UPDATE
                 limit: limit,
                 img: img
             }).then(() => {
@@ -2406,8 +2443,8 @@
             }
         }
 
-        // --- INVESTMENT LOGIC (UPDATED WITH COMMISSION & LIMIT CHECK) ---
-        function buyPlan(planId, cost, dailyRate, limit) {
+        // --- INVESTMENT LOGIC (UPDATED WITH COMMISSION & LIMIT CHECK & DURATION) ---
+        function buyPlan(planId, cost, dailyRate, limit, duration) {
             // Count existing purchases of this planId
             let currentCount = 0;
             if(userData.plans) {
@@ -2438,6 +2475,8 @@
                 active: true, 
                 planId: planId, // STORE ORIGINAL ID
                 daily: dailyRate, 
+                duration: duration, // SAVE DURATION
+                daysClaimed: 0, // START COUNT
                 lastPaid: Date.now(),
                 lastClaimDate: new Date().toDateString() // ADDED: Set to today so they can't claim immediately
             };
