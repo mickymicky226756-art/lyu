@@ -919,7 +919,7 @@
                     </button>
 
                     <div style="display:flex; justify-content:center; gap:20px; margin-top:25px;">
-                        <i class="fa-brands fa-telegram" style="font-size:2rem; color:#229ED9;"></i>
+                        <i class="brands fa-telegram" style="font-size:2rem; color:#229ED9;"></i>
                         <i class="fa-brands fa-whatsapp" style="font-size:2rem; color:#25D366;"></i>
                         <i class="fa-brands fa-facebook" style="font-size:2rem; color:#1877F2;"></i>
                     </div>
@@ -1655,20 +1655,27 @@
             document.getElementById('teamTotComm').innerText = parseFloat(userData.commission || 0).toFixed(2);
 
 
-            // 2. Fetch Requests for Withdraw/Deposit Totals
-            db.ref('requests').orderByChild('user').equalTo(currentUser).once('value', (snap) => {
-                let totDep = 0;
-                let totWith = 0;
+            // 2. Fetch Requests for Withdraw/Deposit Totals (UPDATED TO SEPARATE NODES)
+            let totDep = 0;
+            let totWith = 0;
+
+            db.ref('deposits').orderByChild('user').equalTo(currentUser).once('value', (snap) => {
                 if(snap.exists()) {
                     snap.forEach(c => {
                         const r = c.val();
-                        if(r.status === 'approve') {
-                            if(r.type === 'deposit') totDep += parseFloat(r.amount);
-                            if(r.type === 'withdraw') totWith += parseFloat(r.amount);
-                        }
+                        if(r.status === 'approve') totDep += parseFloat(r.amount);
                     });
                 }
                 document.getElementById('profTotDep').innerText = totDep.toFixed(2);
+            });
+
+            db.ref('withdrawals').orderByChild('user').equalTo(currentUser).once('value', (snap) => {
+                if(snap.exists()) {
+                    snap.forEach(c => {
+                        const r = c.val();
+                        if(r.status === 'approve') totWith += parseFloat(r.amount);
+                    });
+                }
                 document.getElementById('profTotWith').innerText = totWith.toFixed(2);
             });
 
@@ -2156,7 +2163,7 @@
             document.getElementById('claimSuccessModal').style.display = 'none';
         }
 
-        // --- DEPOSIT PAGE LOGIC (MULTI-STEP & LOADING) ---
+        // --- DEPOSIT PAGE LOGIC (UPDATED TO DEPOSITS NODE) ---
         function nextDepositStep() {
             const amount = document.getElementById('depAmountPage').value;
             // NEW: Min Deposit Check 650
@@ -2179,8 +2186,8 @@
             
             if(!amount || !txn || !senderName) return showToast("Please fill all details including Name");
 
-            // --- NEW CHECK: CHECK FOR DUPLICATE TXN ID ---
-            db.ref('requests').orderByChild('txnId').equalTo(txn).once('value', (snapshot) => {
+            // --- CHECK IN DEPOSITS NODE ---
+            db.ref('deposits').orderByChild('txnId').equalTo(txn).once('value', (snapshot) => {
                 if (snapshot.exists()) {
                     showToast("Transaction ID already used! / ይህ መለያ ቁጥር ከዚህ በፊት ጥቅም ላይ ውሏል!");
                     return;
@@ -2196,7 +2203,7 @@
                         timestamp: Date.now()
                     };
 
-                    const reqRef = db.ref('requests').push();
+                    const reqRef = db.ref('deposits').push();
                     reqRef.set(reqData).then(() => {
                         showProcessingModal(reqRef.key);
                     });
@@ -2204,7 +2211,7 @@
             });
         }
 
-        // --- PROCESSING MODAL LOGIC ---
+        // --- PROCESSING MODAL LOGIC (UPDATED TO DEPOSITS NODE) ---
         let processTimer;
         let processInterval;
 
@@ -2238,7 +2245,7 @@
             }, 1000);
 
             // Listen for status changes
-            db.ref('requests/' + reqKey).on('value', (snap) => {
+            db.ref('deposits/' + reqKey).on('value', (snap) => {
                 const data = snap.val();
                 if(data && data.status === 'approve') {
                     clearInterval(processInterval);
@@ -2287,7 +2294,7 @@
             if(processInterval) clearInterval(processInterval);
         }
 
-        // --- ADMIN SETTINGS LOGIC (MODIFIED FOR MULTIPLE BANKS & LIMITS & DURATION) ---
+        // --- ADMIN SETTINGS LOGIC ---
 
         function createAdminPlan() {
             const name = document.getElementById('adminPlanName').value;
@@ -2449,7 +2456,7 @@
             }
         }
 
-        // --- INVESTMENT LOGIC (UPDATED WITH COMMISSION & LIMIT CHECK & DURATION) ---
+        // --- INVESTMENT LOGIC ---
         function buyPlan(planId, cost, dailyRate, limit, duration) {
             // Count existing purchases of this planId
             let currentCount = 0;
@@ -2552,7 +2559,7 @@
             });
         }
 
-        // --- BANK CARD & WITHDRAWAL LOGIC ---
+        // --- BANK CARD & WITHDRAWAL LOGIC (UPDATED TO WITHDRAWALS NODE) ---
 
         function saveBankInfo() {
             const bankName = document.getElementById('bindBankName').value;
@@ -2606,7 +2613,8 @@
             const newBal = userData.balance - amount;
             db.ref('users/' + currentUser).update({ balance: newBal }).then(() => {
                 const reqData = { type: 'withdraw', amount: amount, user: currentUser, phone: userData.phone || currentUser, address: addrStr, status: 'pending', timestamp: Date.now() };
-                db.ref('requests').push(reqData);
+                // CHANGED TO WITHDRAWALS NODE
+                db.ref('withdrawals').push(reqData);
                 
                 document.getElementById('withAmount').value = "";
                 document.getElementById('withAuthPass').value = "";
@@ -2616,48 +2624,77 @@
             });
         }
 
+        // --- ADMIN LISTENER FOR SEPARATE NODES ---
         function listenForRequests() {
-            db.ref('requests').on('value', (snapshot) => {
-                const list = document.getElementById('adminRequestList');
-                list.innerHTML = ""; 
-                if(!snapshot.exists()) {
-                    list.innerHTML = "<p style='text-align:center; padding:20px; color:#aaa;'>No pending requests</p>";
-                    return;
-                }
-                snapshot.forEach((childSnap) => {
-                    const req = childSnap.val();
-                    const key = childSnap.key;
-                    if(req.status === 'pending') {
-                        const isDep = req.type === 'deposit';
-                        const badgeClass = isDep ? 'bg-dep' : 'bg-with';
-                        const typeLabel = isDep ? 'Deposit' : 'Withdraw';
-                        let detailText = "";
-                        
-                        if(isDep) {
-                            detailText = `<div>Ref: ${req.txnId}</div><div>Sender: <b>${req.senderName || 'N/A'}</b></div>`;
-                        } else {
-                            detailText = `<div>Info: ${req.address}</div>`;
-                        }
+            const list = document.getElementById('adminRequestList');
+            list.innerHTML = "<p style='text-align:center; padding:20px; color:#aaa;'>Loading requests...</p>";
 
-                        const html = `
-                            <div class="admin-req-card">
-                                <div class="req-header"><span class="badge ${badgeClass}">${typeLabel}</span><span>ETB ${req.amount}</span></div>
-                                <div class="req-detail">User: ${req.phone}</div>
-                                <div class="req-detail">${detailText}</div>
-                                <div class="req-actions">
-                                    <button class="btn-approve" onclick="processRequest('${key}', 'approve', '${req.user}', ${req.amount}, '${req.type}')"><i class="fa-solid fa-check"></i> Accept</button>
-                                    <button class="btn-reject" onclick="processRequest('${key}', 'reject', '${req.user}', ${req.amount}, '${req.type}')"><i class="fa-solid fa-xmark"></i> Reject</button>
-                                </div>
-                            </div>`;
-                        list.insertAdjacentHTML('beforeend', html);
+            let depSnapshot = null;
+            let withSnapshot = null;
+
+            const renderCombined = () => {
+                if (depSnapshot === null || withSnapshot === null) return;
+
+                list.innerHTML = "";
+                let hasPending = false;
+                
+                const processSnap = (snapshot, typePath) => {
+                    if(snapshot.exists()) {
+                        snapshot.forEach((childSnap) => {
+                            const req = childSnap.val();
+                            const key = childSnap.key;
+                            if(req.status === 'pending') {
+                                hasPending = true;
+                                const isDep = req.type === 'deposit';
+                                const badgeClass = isDep ? 'bg-dep' : 'bg-with';
+                                const typeLabel = isDep ? 'Deposit' : 'Withdraw';
+                                let detailText = "";
+                                
+                                if(isDep) {
+                                    detailText = `<div>Ref: ${req.txnId}</div><div>Sender: <b>${req.senderName || 'N/A'}</b></div>`;
+                                } else {
+                                    detailText = `<div>Info: ${req.address}</div>`;
+                                }
+
+                                const html = `
+                                    <div class="admin-req-card">
+                                        <div class="req-header"><span class="badge ${badgeClass}">${typeLabel}</span><span>ETB ${req.amount}</span></div>
+                                        <div class="req-detail">User: ${req.phone}</div>
+                                        <div class="req-detail">${detailText}</div>
+                                        <div class="req-actions">
+                                            <button class="btn-approve" onclick="processRequest('${key}', 'approve', '${req.user}', ${req.amount}, '${req.type}', '${typePath}')"><i class="fa-solid fa-check"></i> Accept</button>
+                                            <button class="btn-reject" onclick="processRequest('${key}', 'reject', '${req.user}', ${req.amount}, '${req.type}', '${typePath}')"><i class="fa-solid fa-xmark"></i> Reject</button>
+                                        </div>
+                                    </div>`;
+                                list.insertAdjacentHTML('beforeend', html);
+                            }
+                        });
                     }
-                });
+                };
+
+                processSnap(depSnapshot, 'deposits');
+                processSnap(withSnapshot, 'withdrawals');
+
+                if(!hasPending) {
+                    list.innerHTML = "<p style='text-align:center; padding:20px; color:#aaa;'>No pending requests</p>";
+                }
+            };
+
+            db.ref('deposits').on('value', (snap) => {
+                depSnapshot = snap;
+                renderCombined();
+            });
+
+            db.ref('withdrawals').on('value', (snap) => {
+                withSnapshot = snap;
+                renderCombined();
             });
         }
 
-        function processRequest(reqKey, action, userId, amount, type) {
+        // UPDATED: Added nodePath parameter to know which node to update
+        function processRequest(reqKey, action, userId, amount, type, nodePath) {
             if(!confirm(`Are you sure you want to ${action}?`)) return;
-            db.ref('requests/' + reqKey).update({ status: action }).then(() => {
+            db.ref(nodePath + '/' + reqKey).update({ status: action }).then(() => {
                 if (action === 'approve' && type === 'deposit') {
                     db.ref('users/' + userId).once('value', snap => {
                         const currentBal = parseFloat(snap.val().balance || 0);
@@ -2676,24 +2713,38 @@
             });
         }
 
-        // --- HISTORY LOGIC ---
+        // --- HISTORY LOGIC (FETCHING FROM SEPARATE NODES) ---
         let allTxns = [];
 
         function loadFullHistoryPage(filter, btnElement) {
             const list = document.getElementById('fullHistoryList');
             list.innerHTML = "<p style='text-align:center; padding:20px; color:#999;'>Loading transactions...</p>";
             
-            db.ref('requests').orderByChild('user').equalTo(currentUser).once('value', (snap) => {
-                if(!snap.exists()) {
-                    list.innerHTML = "<p style='text-align:center; padding:30px; color:#777; font-size:1.1rem;'>No Transaction History Found.</p>";
-                    return;
+            allTxns = [];
+            let depsDone = false;
+            let withsDone = false;
+
+            const finalizeHistory = () => {
+                if(depsDone && withsDone) {
+                    if(allTxns.length === 0) {
+                        list.innerHTML = "<p style='text-align:center; padding:30px; color:#777; font-size:1.1rem;'>No Transaction History Found.</p>";
+                        return;
+                    }
+                    allTxns.sort((a, b) => b.timestamp - a.timestamp); // Sort by time (newest first)
+                    renderFullHistory(filter);
                 }
-                
-                allTxns = [];
-                snap.forEach(c => allTxns.push(c.val()));
-                allTxns.reverse(); 
-                
-                renderFullHistory(filter);
+            };
+
+            db.ref('deposits').orderByChild('user').equalTo(currentUser).once('value', (snap) => {
+                if(snap.exists()) snap.forEach(c => allTxns.push(c.val()));
+                depsDone = true;
+                finalizeHistory();
+            });
+
+            db.ref('withdrawals').orderByChild('user').equalTo(currentUser).once('value', (snap) => {
+                if(snap.exists()) snap.forEach(c => allTxns.push(c.val()));
+                withsDone = true;
+                finalizeHistory();
             });
         }
 
@@ -2750,7 +2801,7 @@
             });
         }
 
-        // --- INCOME HISTORY LOGIC (UPDATED WITH NEW DESIGN & NEW PLAN KEYS) ---
+        // --- INCOME HISTORY LOGIC ---
         function loadIncomePage() {
             const list = document.getElementById('incomePageList');
             list.innerHTML = "";
