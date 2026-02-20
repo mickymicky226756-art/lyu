@@ -1655,29 +1655,29 @@
             document.getElementById('teamTotComm').innerText = parseFloat(userData.commission || 0).toFixed(2);
 
 
-            // 2. Fetch Requests for Withdraw/Deposit Totals (UPDATED TO SEPARATE NODES)
+            // 2. Fetch Requests for Withdraw/Deposit Totals (FIXED: Uses local filtering to prevent index errors)
             let totDep = 0;
             let totWith = 0;
 
-            db.ref('deposits').orderByChild('user').equalTo(currentUser).once('value', (snap) => {
+            db.ref('deposits').once('value', (snap) => {
                 if(snap.exists()) {
                     snap.forEach(c => {
                         const r = c.val();
-                        if(r.status === 'approve') totDep += parseFloat(r.amount);
+                        if(r.user === currentUser && r.status === 'approve') totDep += parseFloat(r.amount);
                     });
                 }
-                document.getElementById('profTotDep').innerText = totDep.toFixed(2);
-            });
+                if(document.getElementById('profTotDep')) document.getElementById('profTotDep').innerText = totDep.toFixed(2);
+            }).catch(()=>{ document.getElementById('profTotDep').innerText = "0.00"; });
 
-            db.ref('withdrawals').orderByChild('user').equalTo(currentUser).once('value', (snap) => {
+            db.ref('withdrawals').once('value', (snap) => {
                 if(snap.exists()) {
                     snap.forEach(c => {
                         const r = c.val();
-                        if(r.status === 'approve') totWith += parseFloat(r.amount);
+                        if(r.user === currentUser && r.status === 'approve') totWith += parseFloat(r.amount);
                     });
                 }
-                document.getElementById('profTotWith').innerText = totWith.toFixed(2);
-            });
+                if(document.getElementById('profTotWith')) document.getElementById('profTotWith').innerText = totWith.toFixed(2);
+            }).catch(()=>{ document.getElementById('profTotWith').innerText = "0.00"; });
 
             // 3. Team Calculations - FIXED & ROBUST
             if (!userData || !userData.refCode) return;
@@ -1748,12 +1748,13 @@
 
             const taskContainer = document.getElementById('team-task-list');
             
-            db.ref('users').orderByChild('referredBy').equalTo(userData.refCode).once('value', (snapshot) => {
+            // FIXED: Fetches all users and filters locally to avoid missing index crash
+            db.ref('users').once('value', (snapshot) => {
                 let validReferrals = 0;
                 if(snapshot.exists()){
                     snapshot.forEach((child) => {
                         const u = child.val();
-                        if(u.plans && Object.keys(u.plans).length > 0) {
+                        if(u.referredBy === userData.refCode && u.plans && Object.keys(u.plans).length > 0) {
                             validReferrals++;
                         }
                     });
@@ -2112,16 +2113,24 @@
                     const commAmount = parseFloat(amount) * 0.08; // 8% of profit
                     
                     // Find Referrer by Code
-                    db.ref('users').orderByChild('refCode').equalTo(userData.referredBy).once('value', (snap) => {
+                    db.ref('users').once('value', (snap) => {
                         if(snap.exists()) {
-                            const refKey = Object.keys(snap.val())[0];
-                            const refData = snap.val()[refKey];
+                            let refKey = null;
+                            let refData = null;
+                            snap.forEach(child => {
+                                if(child.val().refCode === userData.referredBy) {
+                                    refKey = child.key;
+                                    refData = child.val();
+                                }
+                            });
                             
                             // Add Commission to Referrer
-                            db.ref('users/' + refKey).update({
-                                balance: (refData.balance || 0) + commAmount,
-                                commission: (refData.commission || 0) + commAmount
-                            });
+                            if(refKey && refData) {
+                                db.ref('users/' + refKey).update({
+                                    balance: (refData.balance || 0) + commAmount,
+                                    commission: (refData.commission || 0) + commAmount
+                                });
+                            }
                         }
                     });
                 }
@@ -2187,8 +2196,16 @@
             if(!amount || !txn || !senderName) return showToast("Please fill all details including Name");
 
             // --- CHECK IN DEPOSITS NODE ---
-            db.ref('deposits').orderByChild('txnId').equalTo(txn).once('value', (snapshot) => {
-                if (snapshot.exists()) {
+            // Local Filtering instead of orderByChild to be safe from Index Errors
+            db.ref('deposits').once('value', (snapshot) => {
+                let isUsed = false;
+                if(snapshot.exists()) {
+                    snapshot.forEach(child => {
+                        if(child.val().txnId === txn) isUsed = true;
+                    });
+                }
+                
+                if (isUsed) {
                     showToast("Transaction ID already used! / ይህ መለያ ቁጥር ከዚህ በፊት ጥቅም ላይ ውሏል!");
                     return;
                 } else {
@@ -2510,24 +2527,35 @@
 
         function distributeCommissions(referrerCode, amount) {
             // Level 1: 12% 
-            db.ref('users').orderByChild('refCode').equalTo(referrerCode).once('value', (snap) => {
+            // Local filter for extra safety
+            db.ref('users').once('value', (snap) => {
                 if(snap.exists()) {
-                    const u1Key = Object.keys(snap.val())[0];
-                    const u1Data = snap.val()[u1Key];
-                    const comm1 = amount * 0.12;
-                    
-                    // Update Level 1 User
-                    db.ref('users/' + u1Key).update({
-                        balance: (u1Data.balance || 0) + comm1,
-                        commission: (u1Data.commission || 0) + comm1
+                    let u1Key = null, u1Data = null;
+                    snap.forEach(child => {
+                        if(child.val().refCode === referrerCode) {
+                            u1Key = child.key; u1Data = child.val();
+                        }
                     });
 
-                    // Level 2: 2% (Check if Level 1 has a referrer)
-                    if(u1Data.referredBy && u1Data.referredBy !== 'admin') {
-                        db.ref('users').orderByChild('refCode').equalTo(u1Data.referredBy).once('value', (snap2) => {
-                            if(snap2.exists()) {
-                                const u2Key = Object.keys(snap2.val())[0];
-                                const u2Data = snap2.val()[u2Key];
+                    if(u1Key && u1Data) {
+                        const comm1 = amount * 0.12;
+                        
+                        // Update Level 1 User
+                        db.ref('users/' + u1Key).update({
+                            balance: (u1Data.balance || 0) + comm1,
+                            commission: (u1Data.commission || 0) + comm1
+                        });
+
+                        // Level 2: 2% (Check if Level 1 has a referrer)
+                        if(u1Data.referredBy && u1Data.referredBy !== 'admin') {
+                            let u2Key = null, u2Data = null;
+                            snap.forEach(child => {
+                                if(child.val().refCode === u1Data.referredBy) {
+                                    u2Key = child.key; u2Data = child.val();
+                                }
+                            });
+                            
+                            if(u2Key && u2Data) {
                                 const comm2 = amount * 0.02;
                                 
                                 // Update Level 2 User
@@ -2538,22 +2566,24 @@
 
                                 // Level 3: 1% (Check if Level 2 has a referrer)
                                 if(u2Data.referredBy && u2Data.referredBy !== 'admin') {
-                                    db.ref('users').orderByChild('refCode').equalTo(u2Data.referredBy).once('value', (snap3) => {
-                                        if(snap3.exists()) {
-                                            const u3Key = Object.keys(snap3.val())[0];
-                                            const u3Data = snap3.val()[u3Key];
-                                            const comm3 = amount * 0.01;
-                                            
-                                            // Update Level 3 User
-                                            db.ref('users/' + u3Key).update({
-                                                balance: (u3Data.balance || 0) + comm3,
-                                                commission: (u3Data.commission || 0) + comm3
-                                            });
+                                    let u3Key = null, u3Data = null;
+                                    snap.forEach(child => {
+                                        if(child.val().refCode === u2Data.referredBy) {
+                                            u3Key = child.key; u3Data = child.val();
                                         }
                                     });
+                                    
+                                    if(u3Key && u3Data) {
+                                        const comm3 = amount * 0.01;
+                                        // Update Level 3 User
+                                        db.ref('users/' + u3Key).update({
+                                            balance: (u3Data.balance || 0) + comm3,
+                                            commission: (u3Data.commission || 0) + comm3
+                                        });
+                                    }
                                 }
                             }
-                        });
+                        }
                     }
                 }
             });
@@ -2713,13 +2743,18 @@
             });
         }
 
-        // --- HISTORY LOGIC (FETCHING FROM SEPARATE NODES) ---
+        // --- HISTORY LOGIC (FIXED TO BYPASS FIREBASE INDEX ISSUES) ---
         let allTxns = [];
 
         function loadFullHistoryPage(filter, btnElement) {
             const list = document.getElementById('fullHistoryList');
             list.innerHTML = "<p style='text-align:center; padding:20px; color:#999;'>Loading transactions...</p>";
             
+            // Reset tab highlights
+            document.querySelectorAll('.h-tab').forEach(b => b.classList.remove('active'));
+            if(btnElement) btnElement.classList.add('active');
+            else document.querySelectorAll('.h-tab')[0].classList.add('active'); // default ALL
+
             allTxns = [];
             let depsDone = false;
             let withsDone = false;
@@ -2730,22 +2765,33 @@
                         list.innerHTML = "<p style='text-align:center; padding:30px; color:#777; font-size:1.1rem;'>No Transaction History Found.</p>";
                         return;
                     }
-                    allTxns.sort((a, b) => b.timestamp - a.timestamp); // Sort by time (newest first)
-                    renderFullHistory(filter);
+                    allTxns.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)); // Sort by time (newest first)
+                    renderFullHistory(filter || 'all');
                 }
             };
 
-            db.ref('deposits').orderByChild('user').equalTo(currentUser).once('value', (snap) => {
-                if(snap.exists()) snap.forEach(c => allTxns.push(c.val()));
+            // Local filter applied inside forEach to avoid silent block from Firebase missing Index
+            db.ref('deposits').once('value', (snap) => {
+                if(snap.exists()) {
+                    snap.forEach(c => {
+                        const val = c.val();
+                        if(val.user === currentUser) allTxns.push(val);
+                    });
+                }
                 depsDone = true;
                 finalizeHistory();
-            });
+            }).catch(e => { depsDone = true; finalizeHistory(); });
 
-            db.ref('withdrawals').orderByChild('user').equalTo(currentUser).once('value', (snap) => {
-                if(snap.exists()) snap.forEach(c => allTxns.push(c.val()));
+            db.ref('withdrawals').once('value', (snap) => {
+                if(snap.exists()) {
+                    snap.forEach(c => {
+                        const val = c.val();
+                        if(val.user === currentUser) allTxns.push(val);
+                    });
+                }
                 withsDone = true;
                 finalizeHistory();
-            });
+            }).catch(e => { withsDone = true; finalizeHistory(); });
         }
 
         function filterHistoryPage(filter, btn) {
@@ -2779,7 +2825,10 @@
                 const label = isDep ? 'Deposit' : 'Withdraw';
                 const iconClass = isDep ? 'dep' : 'with';
                 const icon = isDep ? '<i class="fa-solid fa-arrow-down"></i>' : '<i class="fa-solid fa-arrow-up"></i>';
-                const date = new Date(t.timestamp).toLocaleDateString() + ' ' + new Date(t.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                
+                // Safe Date Rendering
+                const txTime = t.timestamp ? new Date(t.timestamp) : new Date();
+                const date = txTime.toLocaleDateString() + ' ' + txTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 
                 const html = `
                 <div class="history-item-full animate-up">
