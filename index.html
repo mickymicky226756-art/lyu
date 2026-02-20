@@ -586,7 +586,7 @@
                 </h4>
                 <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;">
                     <span>Level 1 (Direct)</span>
-                    <span style="font-weight:bold; color:#166534; background:#dcfce7; padding:2px 8px; border-radius:4px;">13%</span>
+                    <span style="font-weight:bold; color:#166534; background:#dcfce7; padding:2px 8px; border-radius:4px;">12%</span>
                 </div>
                 <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;">
                     <span>Level 2 (Team)</span>
@@ -1512,7 +1512,7 @@
         function switchView(viewName) {
             if(viewName === 'admin' && currentUser !== '44') return;
 
-            // Reset Deposit View
+            // Reset Deposit View (UPDATED FOR MULTI BANK)
             if(viewName === 'deposit') {
                 document.getElementById('depositStep1').style.display = 'block';
                 document.getElementById('depositStep2').style.display = 'none';
@@ -1709,7 +1709,9 @@
                 const wholeTeam = [...lvl1, ...lvl2, ...lvl3];
 
                 wholeTeam.forEach(u => {
+                   // Check if plans object exists and has at least one key
                    if(u.plans && Object.keys(u.plans).length > 0) {
+                       // Optional: Check if at least one plan is active
                        let hasActive = false;
                        for(let k in u.plans) {
                            if(u.plans[k].active) hasActive = true;
@@ -1726,7 +1728,7 @@
             });
         }
 
-        // --- TEAM TASK LOGIC ---
+        // --- TEAM TASK LOGIC (UPDATED: INVITE BUTTON AT TOP) ---
         function loadTeamTasks() {
             const milestones = [
                 { count: 3, reward: 120 },
@@ -1755,11 +1757,13 @@
 
                 const t = translations[currentLang];
 
+                // --- NEW POSITION: INVITE BUTTON AT THE TOP ---
                 const inviteHtml = `
                 <div style="text-align:center; padding:10px; margin-bottom: 10px;">
                     <button class="btn-full" onclick="switchView('invite')"><i class="fa-solid fa-share-nodes"></i> ${t.invite || 'Invite Friends'}</button>
                 </div>`;
                 taskContainer.insertAdjacentHTML('beforeend', inviteHtml);
+                // ----------------------------------------------
 
                 milestones.forEach((m) => {
                     const isClaimed = userData.claimedRewards && userData.claimedRewards['r_' + m.count];
@@ -1821,6 +1825,7 @@
             });
         }
         
+        // NEW: DAILY CHECK IN FUNCTION
         function dailyCheckIn() {
             const today = new Date().toDateString();
             const lastCheck = localStorage.getItem('lastCheckIn_' + currentUser);
@@ -1829,6 +1834,7 @@
                 return showToast("Already checked in today!");
             }
             
+            // Add 4 Birr
             const newBal = (userData.balance || 0) + 4;
             db.ref('users/' + currentUser).update({ balance: newBal }).then(() => {
                 localStorage.setItem('lastCheckIn_' + currentUser, today);
@@ -1837,9 +1843,10 @@
             });
         }
         
-        // --- GIFT CODE LOGIC ---
+        // --- GIFT CODE LOGIC (UPDATED WITH SINGLE-USE) ---
         function generateSingleUseCode() {
             const amount = parseFloat(document.getElementById('genAmount').value);
+            // Single use logic is handled by setting maxUses = 1
             const uses = 1; 
             
             if(!amount) return showToast("Enter Amount");
@@ -1881,8 +1888,8 @@
             }
             
             db.ref('giftCodes/' + code).transaction((currentData) => {
-                if(currentData === null) return null; 
-                if(currentData.usedCount >= currentData.maxUses) return; 
+                if(currentData === null) return null; // Code doesn't exist
+                if(currentData.usedCount >= currentData.maxUses) return; // Max uses reached (This handles Single Use)
                 
                 return {
                     ...currentData,
@@ -1897,6 +1904,7 @@
                     const val = snapshot.val();
                     const bonus = val.amount;
                     
+                    // Add Balance to User
                     const newBal = (userData.balance || 0) + bonus;
                     const updates = {};
                     updates['balance'] = newBal;
@@ -1915,7 +1923,7 @@
             });
         }
 
-        // --- SHOP PLANS LOGIC ---
+        // --- SHOP PLANS LOGIC (UPDATED: WITH LIMIT & DURATION) ---
         function loadShopPlans() {
             db.ref('plans').on('value', (snapshot) => {
                 const container = document.getElementById('shopPlanList');
@@ -1930,17 +1938,20 @@
                     const plan = childSnap.val();
                     const key = childSnap.key;
                     
+                    // Calculate how many times user bought this
                     let purchasedCount = 0;
                     if(userData.plans) {
                         for(let pk in userData.plans) {
-                            if(userData.plans[pk].planId === key || pk === key) { 
+                            if(userData.plans[pk].planId === key || pk === key) { // Check new format or old format
                                 purchasedCount++;
                             }
                         }
                     }
 
-                    const limit = plan.limit || 1; 
+                    const limit = plan.limit || 1; // Default limit 1 if not set
                     const isLimitReached = purchasedCount >= limit;
+                    
+                    // Get Duration
                     const duration = plan.duration || 365;
 
                     let btnText = (currentLang === 'am' ? "ይግዙ" : "Invest");
@@ -1981,7 +1992,7 @@
             });
         }
 
-        // --- MY ORDERS LOGIC ---
+        // --- MY ORDERS LOGIC (UPDATED: WITH EXPIRATION CHECK) ---
         function loadMyOrders() {
             const container = document.getElementById('myOrdersList');
             container.innerHTML = "";
@@ -1994,6 +2005,7 @@
             const now = new Date();
             const hour = now.getHours();
             const todayStr = now.toDateString(); 
+            
             const isOpen = (hour >= 6 && hour < 18); 
             
             db.ref('plans').once('value', (snap) => {
@@ -2002,13 +2014,16 @@
                 for(let key in userData.plans) {
                     const uPlan = userData.plans[key];
                     if(uPlan.active) {
+                        // Support New ID format (pid_timestamp) or Old (pid)
                         const realPid = uPlan.planId || key;
                         const pDetail = allPlans[realPid] || {name: "Active Plan", price: 0};
                         
+                        // Check Duration
                         const duration = uPlan.duration || 365;
                         const daysClaimed = uPlan.daysClaimed || 0;
                         const isExpired = daysClaimed >= duration;
 
+                        // Check claim status
                         const lastClaim = uPlan.lastClaimDate || "";
                         const alreadyClaimed = (lastClaim === todayStr);
                         
@@ -2051,7 +2066,9 @@
             });
         }
         
+        // --- CLAIM FUNCTION (UPDATED WITH DURATION CHECK) ---
         function claimDailyProfit(planKey, amount) {
+            // Re-check time on click
             const now = new Date();
             const hour = now.getHours();
             
@@ -2060,11 +2077,14 @@
             }
             
             const todayStr = now.toDateString();
+            
+            // Check if already claimed in DB (Double check)
             const plan = userData.plans[planKey];
             if(plan.lastClaimDate === todayStr) {
                 return showToast("Already claimed today!");
             }
 
+            // Check Duration Expiry
             const duration = plan.duration || 365;
             const daysClaimed = plan.daysClaimed || 0;
             if(daysClaimed >= duration) {
@@ -2072,18 +2092,25 @@
             }
             
             const updates = {};
+            // User gets FULL Amount (No deduction)
             updates['balance'] = (userData.balance || 0) + parseFloat(amount);
             updates['income'] = (userData.income || 0) + parseFloat(amount);
             updates['plans/' + planKey + '/lastClaimDate'] = todayStr;
-            updates['plans/' + planKey + '/daysClaimed'] = daysClaimed + 1; 
+            updates['plans/' + planKey + '/daysClaimed'] = daysClaimed + 1; // Increment Claimed Days
             
             db.ref('users/' + currentUser).update(updates).then(() => {
+                
+                // --- NEW LOGIC: GIVE 8% TO REFERRER (WITHOUT DEDUCTING FROM USER) ---
                 if(userData.referredBy && userData.referredBy !== 'admin') {
-                    const commAmount = parseFloat(amount) * 0.08; 
+                    const commAmount = parseFloat(amount) * 0.08; // 8% of profit
+                    
+                    // Find Referrer by Code
                     db.ref('users').orderByChild('refCode').equalTo(userData.referredBy).once('value', (snap) => {
                         if(snap.exists()) {
                             const refKey = Object.keys(snap.val())[0];
                             const refData = snap.val()[refKey];
+                            
+                            // Add Commission to Referrer
                             db.ref('users/' + refKey).update({
                                 balance: (refData.balance || 0) + commAmount,
                                 commission: (refData.commission || 0) + commAmount
@@ -2091,9 +2118,13 @@
                         }
                     });
                 }
+                // --- END NEW LOGIC ---
+
+                // Trigger Effect and Modal
                 triggerConfetti();
                 showClaimSuccessModal(amount);
-                loadMyOrders(); 
+                
+                loadMyOrders(); // Refresh buttons
                 updateUI();
             });
         }
@@ -2125,9 +2156,10 @@
             document.getElementById('claimSuccessModal').style.display = 'none';
         }
 
-        // --- DEPOSIT PAGE LOGIC ---
+        // --- DEPOSIT PAGE LOGIC (MULTI-STEP & LOADING) ---
         function nextDepositStep() {
             const amount = document.getElementById('depAmountPage').value;
+            // NEW: Min Deposit Check 650
             if(!amount || amount < 650) return showToast("Minimum Deposit is ETB 650");
             
             document.getElementById('depositStep1').style.display = 'none';
@@ -2142,11 +2174,12 @@
 
         function submitDepositFromPage() {
             const amount = parseFloat(document.getElementById('depAmountPage').value);
-            const txn = document.getElementById('depTransIdPage').value.trim(); 
+            const txn = document.getElementById('depTransIdPage').value.trim(); // Trim whitespace
             const senderName = document.getElementById('depSenderName').value;
             
             if(!amount || !txn || !senderName) return showToast("Please fill all details including Name");
 
+            // --- NEW CHECK: CHECK FOR DUPLICATE TXN ID ---
             db.ref('requests').orderByChild('txnId').equalTo(txn).once('value', (snapshot) => {
                 if (snapshot.exists()) {
                     showToast("Transaction ID already used! / ይህ መለያ ቁጥር ከዚህ በፊት ጥቅም ላይ ውሏል!");
@@ -2171,12 +2204,14 @@
             });
         }
 
+        // --- PROCESSING MODAL LOGIC ---
         let processTimer;
         let processInterval;
 
         function showProcessingModal(reqKey) {
             document.getElementById('processModal').style.display = 'flex';
             
+            // Reset UI states
             document.getElementById('loaderSpinner').style.display = 'block';
             document.getElementById('iconSuccess').style.display = 'none';
             document.getElementById('iconFail').style.display = 'none';
@@ -2186,6 +2221,7 @@
             document.getElementById('closeProcessBtn').style.display = 'none';
             document.getElementById('processTimer').style.display = 'block';
 
+            // Start 1 minute timer
             let timeLeft = 60;
             document.getElementById('processTimer').innerText = "01:00";
             
@@ -2201,6 +2237,7 @@
                 }
             }, 1000);
 
+            // Listen for status changes
             db.ref('requests/' + reqKey).on('value', (snap) => {
                 const data = snap.val();
                 if(data && data.status === 'approve') {
@@ -2250,13 +2287,15 @@
             if(processInterval) clearInterval(processInterval);
         }
 
-        // --- ADMIN SETTINGS LOGIC ---
+        // --- ADMIN SETTINGS LOGIC (MODIFIED FOR MULTIPLE BANKS & LIMITS & DURATION) ---
+
         function createAdminPlan() {
             const name = document.getElementById('adminPlanName').value;
             const price = parseFloat(document.getElementById('adminPlanPrice').value);
             const roi = parseFloat(document.getElementById('adminPlanRoi').value);
+            // NEW: DURATION INPUT
             const duration = parseInt(document.getElementById('adminPlanDuration').value);
-            const limit = parseInt(document.getElementById('adminPlanLimit').value) || 1; 
+            const limit = parseInt(document.getElementById('adminPlanLimit').value) || 1; // Default 1
             const img = document.getElementById('adminPlanImg').value;
 
             if(!name || !price || !roi || !duration) return showToast("Fill all plan details including duration");
@@ -2265,7 +2304,7 @@
                 name: name,
                 price: price,
                 roi: roi,
-                duration: duration, 
+                duration: duration, // SAVE DURATION
                 limit: limit, 
                 img: img || "https://images.unsplash.com/photo-1511499767150-a48a237f0083"
             }).then(() => {
@@ -2273,12 +2312,13 @@
                 document.getElementById('adminPlanName').value = "";
                 document.getElementById('adminPlanPrice').value = "";
                 document.getElementById('adminPlanRoi').value = "";
-                document.getElementById('adminPlanDuration').value = ""; 
+                document.getElementById('adminPlanDuration').value = ""; // Clear
                 document.getElementById('adminPlanLimit').value = "";
                 document.getElementById('adminPlanImg').value = "";
             });
         }
 
+        // --- NEW: LOAD PLANS FOR ADMIN EDITING ---
         function loadAdminPlans() {
             db.ref('plans').on('value', (snap) => {
                 const container = document.getElementById('adminExistingPlansList');
@@ -2309,6 +2349,7 @@
             });
         }
 
+        // --- NEW: EDIT PLAN MODAL LOGIC ---
         let currentEditKey = null;
 
         function openEditPlanModal(key, name, price, roi, limit, duration, img) {
@@ -2316,7 +2357,7 @@
             document.getElementById('editPlanName').value = name;
             document.getElementById('editPlanPrice').value = price;
             document.getElementById('editPlanRoi').value = roi;
-            document.getElementById('editPlanDuration').value = duration; 
+            document.getElementById('editPlanDuration').value = duration; // SET DURATION
             document.getElementById('editPlanLimit').value = limit;
             document.getElementById('editPlanImg').value = img;
             
@@ -2329,7 +2370,7 @@
             const name = document.getElementById('editPlanName').value;
             const price = parseFloat(document.getElementById('editPlanPrice').value);
             const roi = parseFloat(document.getElementById('editPlanRoi').value);
-            const duration = parseInt(document.getElementById('editPlanDuration').value); 
+            const duration = parseInt(document.getElementById('editPlanDuration').value); // GET DURATION
             const limit = parseInt(document.getElementById('editPlanLimit').value);
             const img = document.getElementById('editPlanImg').value;
 
@@ -2337,7 +2378,7 @@
                 name: name,
                 price: price,
                 roi: roi,
-                duration: duration, 
+                duration: duration, // UPDATE
                 limit: limit,
                 img: img
             }).then(() => {
@@ -2347,13 +2388,15 @@
         }
 
         function deletePlan(key) {
-            if(confirm("Are you sure you want to delete this plan?")) {
+            if(confirm("Are you sure you want to delete this plan? Users who already bought it will keep it, but new users won't see it.")) {
                 db.ref('plans/' + key).remove().then(() => {
                     showToast("Plan Deleted.");
                 });
             }
         }
 
+
+        // UPDATED: ADD NEW PAYMENT METHOD (Push to list)
         function addNewPaymentMethod() {
             const bank = document.getElementById('adminBankName').value;
             const accName = document.getElementById('adminAccountName').value;
@@ -2373,6 +2416,7 @@
             });
         }
 
+        // UPDATED: LOAD LIST FOR ADMIN
         function loadAdminBankList() {
             db.ref('settings/paymentMethods').on('value', (snap) => {
                 const container = document.getElementById('adminExistingBanks');
@@ -2405,11 +2449,13 @@
             }
         }
 
-        // --- INVESTMENT LOGIC ---
+        // --- INVESTMENT LOGIC (UPDATED WITH COMMISSION & LIMIT CHECK & DURATION) ---
         function buyPlan(planId, cost, dailyRate, limit, duration) {
+            // Count existing purchases of this planId
             let currentCount = 0;
             if(userData.plans) {
                 for(let key in userData.plans) {
+                    // Check if key matches (old way) OR if 'planId' prop matches (new way)
                     if(key === planId || userData.plans[key].planId === planId) {
                         currentCount++;
                     }
@@ -2422,48 +2468,54 @@
 
             if(userData.balance < cost) return showToast("Insufficient Balance");
             
+            // Check if this is the FIRST time investment (Total plans check)
             const isFirstInvestment = (!userData.plans || Object.keys(userData.plans).length === 0);
 
             const newBal = userData.balance - cost;
             const newPlans = userData.plans || {};
             
+            // NEW KEY GENERATION: planId_TIMESTAMP to allow multiple buys
             const uniqueKey = planId + '_' + Date.now();
             
             newPlans[uniqueKey] = { 
                 active: true, 
-                planId: planId, 
+                planId: planId, // STORE ORIGINAL ID
                 daily: dailyRate, 
-                duration: duration, 
-                daysClaimed: 0, 
+                duration: duration, // SAVE DURATION
+                daysClaimed: 0, // START COUNT
                 lastPaid: Date.now(),
-                lastClaimDate: new Date().toDateString() 
+                lastClaimDate: new Date().toDateString() // ADDED: Set to today so they can't claim immediately
             };
             
             db.ref('users/' + currentUser).update({ balance: newBal, plans: newPlans }).then(() => {
                 showToast("Investment Successful!");
                 
+                // Trigger Referral Commission only on FIRST investment
                 if(isFirstInvestment && userData.referredBy && userData.referredBy !== 'admin') {
                     distributeCommissions(userData.referredBy, cost);
                 }
 
                 updateUI(); 
-                loadShopPlans(); 
+                loadShopPlans(); // Will update counters
                 loadTeamTasks(); 
             });
         }
 
         function distributeCommissions(referrerCode, amount) {
+            // Level 1: 12% 
             db.ref('users').orderByChild('refCode').equalTo(referrerCode).once('value', (snap) => {
                 if(snap.exists()) {
                     const u1Key = Object.keys(snap.val())[0];
                     const u1Data = snap.val()[u1Key];
                     const comm1 = amount * 0.12;
                     
+                    // Update Level 1 User
                     db.ref('users/' + u1Key).update({
                         balance: (u1Data.balance || 0) + comm1,
                         commission: (u1Data.commission || 0) + comm1
                     });
 
+                    // Level 2: 2% (Check if Level 1 has a referrer)
                     if(u1Data.referredBy && u1Data.referredBy !== 'admin') {
                         db.ref('users').orderByChild('refCode').equalTo(u1Data.referredBy).once('value', (snap2) => {
                             if(snap2.exists()) {
@@ -2471,11 +2523,13 @@
                                 const u2Data = snap2.val()[u2Key];
                                 const comm2 = amount * 0.02;
                                 
+                                // Update Level 2 User
                                 db.ref('users/' + u2Key).update({
                                     balance: (u2Data.balance || 0) + comm2,
                                     commission: (u2Data.commission || 0) + comm2
                                 });
 
+                                // Level 3: 1% (Check if Level 2 has a referrer)
                                 if(u2Data.referredBy && u2Data.referredBy !== 'admin') {
                                     db.ref('users').orderByChild('refCode').equalTo(u2Data.referredBy).once('value', (snap3) => {
                                         if(snap3.exists()) {
@@ -2483,6 +2537,7 @@
                                             const u3Data = snap3.val()[u3Key];
                                             const comm3 = amount * 0.01;
                                             
+                                            // Update Level 3 User
                                             db.ref('users/' + u3Key).update({
                                                 balance: (u3Data.balance || 0) + comm3,
                                                 commission: (u3Data.commission || 0) + comm3
@@ -2497,7 +2552,8 @@
             });
         }
 
-        // --- BANK CARD & WITHDRAWAL LOGIC (UPDATED WITH FIX) ---
+        // --- BANK CARD & WITHDRAWAL LOGIC ---
+
         function saveBankInfo() {
             const bankName = document.getElementById('bindBankName').value;
             const accName = document.getElementById('bindAccName').value;
@@ -2530,8 +2586,11 @@
             const passAttempt = document.getElementById('withAuthPass').value;
             
             if(!amount || !passAttempt) return showToast("Enter Amount and Password");
+            
+            // NEW: Min Withdraw 150
             if(amount < 150) return showToast("Minimum Withdrawal is ETB 150");
 
+            // --- RESTRICTION: MUST INVEST FIRST ---
             if(!userData.plans || Object.keys(userData.plans).length === 0) {
                 return showToast("You must invest in a product first to withdraw!");
             }
@@ -2543,29 +2602,17 @@
             if(amount > userData.balance) return showToast("Insufficient Balance");
             
             const addrStr = `${userData.bankInfo.bankName} - ${userData.bankInfo.accNum} (${userData.bankInfo.accName})`;
-            const newBal = userData.balance - amount;
-
-            // FIX: Push request and wait for it before updating user balance safely
-            const reqData = { 
-                type: 'withdraw', 
-                amount: amount, 
-                user: currentUser, 
-                phone: userData.phone || currentUser, 
-                address: addrStr, 
-                status: 'pending', 
-                timestamp: Date.now() 
-            };
             
-            const reqRef = db.ref('requests').push();
-            reqRef.set(reqData).then(() => {
-                return db.ref('users/' + currentUser).update({ balance: newBal });
-            }).then(() => {
+            const newBal = userData.balance - amount;
+            db.ref('users/' + currentUser).update({ balance: newBal }).then(() => {
+                const reqData = { type: 'withdraw', amount: amount, user: currentUser, phone: userData.phone || currentUser, address: addrStr, status: 'pending', timestamp: Date.now() };
+                db.ref('requests').push(reqData);
+                
                 document.getElementById('withAmount').value = "";
                 document.getElementById('withAuthPass').value = "";
+                
                 showToast("Withdrawal request sent!");
                 switchView('home');
-            }).catch((err) => {
-                showToast("Error processing withdrawal.");
             });
         }
 
@@ -2629,16 +2676,10 @@
             });
         }
 
-        // --- HISTORY LOGIC (UPDATED ROBUST FILTERING) ---
+        // --- HISTORY LOGIC ---
         let allTxns = [];
 
-        function loadFullHistoryPage(filter) {
-            // FIX: Reset visual tabs every time the page loads
-            document.querySelectorAll('.h-tab').forEach(b => b.classList.remove('active'));
-            if(filter === 'all') document.querySelector('.h-tab[onclick*="\'all\'"]').classList.add('active');
-            else if(filter === 'deposit') document.querySelector('.h-tab[onclick*="\'deposit\'"]').classList.add('active');
-            else if(filter === 'withdraw') document.querySelector('.h-tab[onclick*="\'withdraw\'"]').classList.add('active');
-
+        function loadFullHistoryPage(filter, btnElement) {
             const list = document.getElementById('fullHistoryList');
             list.innerHTML = "<p style='text-align:center; padding:20px; color:#999;'>Loading transactions...</p>";
             
@@ -2669,9 +2710,8 @@
             list.innerHTML = "";
             
             let filtered = allTxns;
-            if(filter && filter !== 'all') {
-                // FIX: Case-insensitive match to guarantee it picks up withdraws
-                filtered = allTxns.filter(t => t.type && t.type.toLowerCase() === filter.toLowerCase());
+            if(filter !== 'all') {
+                filtered = allTxns.filter(t => t.type === filter);
             }
 
             if(filtered.length === 0) {
@@ -2680,9 +2720,7 @@
             }
 
             filtered.forEach(t => {
-                const typeStr = (t.type || '').toLowerCase();
-                const isDep = typeStr === 'deposit';
-                
+                const isDep = t.type === 'deposit';
                 let badgeClass = 'badge-pending';
                 if (t.status === 'approve') badgeClass = 'badge-success';
                 if (t.status === 'reject') badgeClass = 'badge-danger';
@@ -2704,7 +2742,7 @@
                         </div>
                     </div>
                     <div style="text-align:right;">
-                        <div style="font-weight:700; font-size:1.1rem; color:var(--text-dark); margin-bottom:4px;">ETB ${parseFloat(t.amount).toFixed(2)}</div>
+                        <div style="font-weight:700; font-size:1.1rem; color:var(--text-dark); margin-bottom:4px;">ETB ${t.amount}</div>
                         <span class="${badgeClass}" style="text-transform:capitalize;">${t.status}</span>
                     </div>
                 </div>`;
@@ -2712,7 +2750,7 @@
             });
         }
 
-        // --- INCOME HISTORY LOGIC ---
+        // --- INCOME HISTORY LOGIC (UPDATED WITH NEW DESIGN & NEW PLAN KEYS) ---
         function loadIncomePage() {
             const list = document.getElementById('incomePageList');
             list.innerHTML = "";
