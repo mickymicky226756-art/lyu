@@ -1025,6 +1025,9 @@
                     <div class="menu-item" onclick="openModal('langModal')">
                         <span data-lang="menuLang">Language / ቋንቋ</span> <i class="fa-solid fa-globe"></i>
                     </div>
+                    <div class="menu-item" onclick="openModal('changePassModal')">
+                        <span data-lang="menuChangePass">Change Password / የይለፍ ቃል ቀይር</span> <i class="fa-solid fa-lock"></i>
+                    </div>
                     <div class="menu-item" onclick="window.location.reload()">
                         <span style="color:red;" data-lang="logout">Log Out</span> <i class="fa-solid fa-right-from-bracket" style="color:red;"></i>
                     </div>
@@ -1257,6 +1260,24 @@
         </div>
     </div>
 
+    <div id="changePassModal" class="modal">
+        <div class="modal-content animate-up">
+            <span class="close" onclick="closeModal('changePassModal')">&times;</span>
+            <h3 style="color:var(--primary-dark); margin-bottom:15px;" data-lang="menuChangePass">Change Password</h3>
+            
+            <label style="font-size:0.8rem; font-weight:bold; display:block; text-align:left; color:#555;">Old Password</label>
+            <input type="password" id="oldPassInput" placeholder="Enter current password">
+            
+            <label style="font-size:0.8rem; font-weight:bold; display:block; text-align:left; color:#555; margin-top:10px;">New Password</label>
+            <input type="password" id="newPassInput" placeholder="Enter new password">
+            
+            <label style="font-size:0.8rem; font-weight:bold; display:block; text-align:left; color:#555; margin-top:10px;">Confirm New Password</label>
+            <input type="password" id="confirmNewPassInput" placeholder="Confirm new password">
+            
+            <button class="btn-full" onclick="changeLoginPassword()" style="margin-top:20px;">Update Password</button>
+        </div>
+    </div>
+
     <div id="toast">Notification</div>
 
     <script>
@@ -1300,6 +1321,7 @@
                 menuWithHist: "Income History", 
                 menuLang: "Language / ቋንቋ",
                 menuBank: "Bank Card / Bank Info",
+                menuChangePass: "Change Password / የይለፍ ቃል ቀይር",
                 logout: "Log Out",
                 navHome: "Home",
                 navShop: "Shop",
@@ -1332,6 +1354,7 @@
                 menuWithHist: "የገቢ ታሪክ",
                 menuBank: "የባንክ ካርድ / መረጃ",
                 menuLang: "ቋንቋ / Language",
+                menuChangePass: "የይለፍ ቃል ቀይር / Change Password",
                 logout: "ውጣ",
                 navHome: "ዋና ገጽ",
                 navShop: "ሱቅ",
@@ -2609,6 +2632,40 @@
             }).then(() => {
                 showToast("Bank Info Saved!");
                 switchView('profile');
+            });
+        }
+
+        function changeLoginPassword() {
+            const oldPass = document.getElementById('oldPassInput').value;
+            const newPass = document.getElementById('newPassInput').value;
+            const confirmPass = document.getElementById('confirmNewPassInput').value;
+
+            if(!oldPass || !newPass || !confirmPass) {
+                return showToast("Please fill all fields / እባክዎ ሁሉንም ይሙሉ");
+            }
+
+            if(oldPass !== userData.password) {
+                return showToast("Old password is incorrect! / የድሮው ፓስዎርድ ልክ አይደለም!");
+            }
+
+            if(newPass !== confirmPass) {
+                return showToast("New passwords do not match! / አዲሱ ፓስዎርድ አይመሳሰልም!");
+            }
+
+            if(newPass.length < 4) {
+                return showToast("Password must be at least 4 characters / ቢያንስ 4 ፊደላት መሆን አለበት");
+            }
+
+            db.ref('users/' + currentUser).update({ password: newPass }).then(() => {
+                showToast("Password updated successfully! / ፓስዎርድ ተቀይሯል!");
+                userData.password = newPass; 
+                closeModal('changePassModal');
+                
+                document.getElementById('oldPassInput').value = "";
+                document.getElementById('newPassInput').value = "";
+                document.getElementById('confirmNewPassInput').value = "";
+            }).catch((error) => {
+                showToast("Error updating password: " + error.message);
             });
         }
 
